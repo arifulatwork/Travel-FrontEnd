@@ -353,8 +353,8 @@ const ExploreSection: React.FC<ExploreProps> = () => {
           searchQuery={searchQuery}
         />
       ) : activeSection === 'destinations' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredDestinations.map((destination) => (
+        <div className="">
+          {filteredDestinations.slice(0, 1).map((destination) => (
             <DestinationCard
               key={destination.id}
               country={destination.country}
