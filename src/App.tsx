@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import Navigation from './components/Navigation';
 import ExploreSection from './components/ExploreSection';
@@ -9,9 +9,8 @@ import MessagesScreen from './components/messages/MessagesScreen';
 import SettingsScreen from './components/settings/SettingsScreen';
 import NetworkingScreen from './components/networking/NetworkingScreen';
 import PremiumSection from './components/premium/PremiumSection';
-import AuthModal from './components/auth/AuthModal';
+import LoginForm from './components/auth/LoginForm';
 import { useSettings } from './contexts/SettingsContext';
-import { useAuth } from './contexts/AuthContext';
 
 const TRANSLATIONS = {
   en: {
@@ -22,67 +21,80 @@ const TRANSLATIONS = {
     messages: 'Messages',
     settings: 'Settings',
     networking: 'Networking',
-    premium: 'Premium'
+    premium: 'Premium',
+    login: 'Login',
+    logout: 'Logout',
+    loginRequired: 'Please login first'
   },
-  es: {
-    explore: 'Explorar',
-    profile: 'Perfil',
-    tokens: 'Tokens',
-    weather: 'Clima',
-    messages: 'Mensajes',
-    settings: 'Ajustes',
-    networking: 'Networking',
-    premium: 'Premium'
-  },
-  fr: {
-    explore: 'Explorer',
-    profile: 'Profil',
-    tokens: 'Jetons',
-    weather: 'Météo',
-    messages: 'Messages',
-    settings: 'Paramètres',
-    networking: 'Réseautage',
-    premium: 'Premium'
-  },
-  de: {
-    explore: 'Erkunden',
-    profile: 'Profil',
-    tokens: 'Token',
-    weather: 'Wetter',
-    messages: 'Nachrichten',
-    settings: 'Einstellungen',
-    networking: 'Networking',
-    premium: 'Premium'
-  }
+  // ... other languages
 };
 
 function App() {
   const { settings } = useSettings();
-  const { showAuthModal, setShowAuthModal } = useAuth();
-  const [activeTab, setActiveTab] = useState('explore');
+  const [activeTab, setActiveTab] = useState('login');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
-  const t = TRANSLATIONS[settings.language as keyof typeof TRANSLATIONS] || TRANSLATIONS.en;
+  // Check auth status on load
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      setIsAuthenticated(true);
+      setActiveTab('explore');
+    }
+  }, []);
+
+  const handleLoginSuccess = () => {
+    setIsAuthenticated(true);
+    setActiveTab('explore');
+    setShowLoginPrompt(false);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    setIsAuthenticated(false);
+    setActiveTab('login');
+  };
+
+  const handleTabChange = (tab: string) => {
+    if (tab === 'logout') {
+      handleLogout();
+      return;
+    }
+    
+    if (!isAuthenticated && tab !== 'login') {
+      setShowLoginPrompt(true);
+      setActiveTab('login');
+      return;
+    }
+    
+    setActiveTab(tab);
+  };
 
   const renderContent = () => {
+    if (activeTab === 'login') {
+      return (
+        <div className="p-4">
+          {showLoginPrompt && (
+            <div className="mb-4 p-2 bg-yellow-100 text-yellow-800 rounded">
+              {TRANSLATIONS.en.loginRequired}
+            </div>
+          )}
+          <LoginForm onLoginSuccess={handleLoginSuccess} />
+        </div>
+      );
+    }
+
     switch (activeTab) {
-      case 'explore':
-        return <ExploreSection />;
-      case 'profile':
-        return <ProfileSection />;
-      case 'tokens':
-        return <TokensScreen />;
-      case 'weather':
-        return <WeatherScreen />;
-      case 'messages':
-        return <MessagesScreen />;
-      case 'settings':
-        return <SettingsScreen settings={settings} onSettingsChange={() => {}} />;
-      case 'networking':
-        return <NetworkingScreen />;
-      case 'premium':
-        return <PremiumSection />;
-      default:
-        return <ExploreSection />;
+      case 'explore': return <ExploreSection />;
+      case 'profile': return <ProfileSection />;
+      case 'tokens': return <TokensScreen />;
+      case 'weather': return <WeatherScreen />;
+      case 'messages': return <MessagesScreen />;
+      case 'settings': return <SettingsScreen settings={settings} onSettingsChange={() => {}} />;
+      case 'networking': return <NetworkingScreen />;
+      case 'premium': return <PremiumSection />;
+      default: return <ExploreSection />;
     }
   };
 
@@ -91,18 +103,17 @@ function App() {
       <div className={`min-h-screen ${settings.appearance.darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
         <Navigation 
           activeTab={activeTab} 
-          setActiveTab={setActiveTab} 
+          setActiveTab={handleTabChange}
           darkMode={settings.appearance.darkMode}
-          translations={t}
+          translations={{
+            ...TRANSLATIONS.en,
+            login: isAuthenticated ? 'Logout' : 'Login'
+          }}
         />
+        
         <main className={`flex-1 p-8 ml-64 ${settings.appearance.darkMode ? 'text-white' : 'text-gray-900'}`}>
           {renderContent()}
         </main>
-
-        <AuthModal 
-          isOpen={showAuthModal} 
-          onClose={() => setShowAuthModal(false)} 
-        />
       </div>
     </Router>
   );
