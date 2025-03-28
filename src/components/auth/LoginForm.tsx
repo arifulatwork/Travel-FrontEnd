@@ -1,67 +1,175 @@
 import React, { useState } from 'react';
+import { 
+  TextField, 
+  Button, 
+  Typography, 
+  Link, 
+  Box, 
+  Paper, 
+  Divider,
+  ThemeProvider,
+  createTheme
+} from '@mui/material';
+import { styled } from '@mui/material/styles';
 
 interface LoginFormProps {
-  onLoginSuccess: () => void; // Callback when login succeeds
+  onLoginSuccess: () => void;
+  onForgotPassword: () => void;
+  onSignUp: () => void;
 }
 
-const LoginForm = ({ onLoginSuccess }: LoginFormProps) => {
+// Create a custom theme with your purple color
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: 'rgb(147, 51, 234)',
+      dark: 'rgb(126, 34, 206)',
+    },
+  },
+});
+
+const StyledPaper = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(4),
+  maxWidth: 400,
+  margin: '0 auto',
+  borderRadius: theme.shape.borderRadius * 2,
+}));
+
+const LoginForm = ({ onLoginSuccess, onForgotPassword, onSignUp }: LoginFormProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError('');
+    
     try {
       const response = await fetch('http://127.0.0.1:8000/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
+      
       const data = await response.json();
+      
       if (response.ok) {
-        localStorage.setItem('token', data.token); // Store token
-        onLoginSuccess(); // Notify App.tsx that login succeeded
+        localStorage.setItem('token', data.token);
+        onLoginSuccess();
       } else {
-        setError(data.message || 'Login failed');
+        setError(data.message || 'Login failed. Please check your credentials.');
       }
     } catch (err) {
       setError('Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="p-4">
-      <h2 className="text-2xl font-bold mb-6">Login</h2>
-      {error && <p className="text-red-500 mb-4">{error}</p>}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
-            required
-          />
-        </div>
-        <button
-          type="submit"
-          className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700"
-        >
-          Login
-        </button>
-      </form>
-    </div>
+    <ThemeProvider theme={theme}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', p: 2 }}>
+        <StyledPaper elevation={3}>
+          <Typography 
+            variant="h4" 
+            component="h1" 
+            gutterBottom 
+            align="center" 
+            color="primary"
+            sx={{ fontWeight: 'bold' }}
+          >
+            Welcome Back
+          </Typography>
+          
+          <Typography variant="body2" color="textSecondary" align="center" gutterBottom>
+            Please enter your credentials to login
+          </Typography>
+          
+          {error && (
+            <Typography color="error" align="center" sx={{ mt: 2 }}>
+              {error}
+            </Typography>
+          )}
+          
+          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
+            <TextField
+              label="Email Address"
+              variant="outlined"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              fullWidth
+              margin="normal"
+              required
+              autoFocus
+              InputLabelProps={{
+                shrink: true,
+              }}
+            />
+            
+            <TextField
+              label="Password"
+              variant="outlined"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              fullWidth
+              margin="normal"
+              required
+              InputLabelProps={{
+                shrink: true,
+              }}
+            />
+            
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+              <Link 
+                component="button" 
+                type="button" 
+                variant="body2"
+                onClick={onForgotPassword}
+                underline="hover"
+                color="primary"
+              >
+                Forgot password?
+              </Link>
+            </Box>
+            
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              fullWidth
+              size="large"
+              disabled={isLoading}
+              sx={{ mt: 1, py: 1.5 }}
+            >
+              {isLoading ? 'Logging in...' : 'Login'}
+            </Button>
+            
+            <Divider sx={{ my: 3, color: 'text.secondary' }}>OR</Divider>
+            
+            <Box sx={{ textAlign: 'center', mt: 2 }}>
+              <Typography variant="body2" display="inline">
+                Don't have an account?{' '}
+              </Typography>
+              <Link 
+                component="button" 
+                type="button" 
+                variant="body2"
+                onClick={onSignUp}
+                underline="hover"
+                fontWeight="medium"
+                color="primary"
+              >
+                Sign Up
+              </Link>
+            </Box>
+          </Box>
+        </StyledPaper>
+      </Box>
+    </ThemeProvider>
   );
 };
 
