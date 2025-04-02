@@ -1,69 +1,140 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Gift, Tag, Hotel, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { 
+  Info, Bot as Lotus, Music, Trees as Tree, Smile as Family, 
+  Factory, Dog, Home, Landmark, Heart, Music as Dance 
+} from 'lucide-react';
 import TripCard from './TripCard';
 import TripDetails from './TripDetails';
 
-const API_BASE_URL = "http://127.0.0.1:8000/api";
+interface ShortTripsSectionProps {
+  maxPrice: number;
+  selectedType: string | null;
+  searchQuery: string;
+}
 
-const ShortTripsSection = ({ maxPrice, selectedType, searchQuery }) => {
-  const [trips, setTrips] = useState([]);
-  const [accommodationOffers, setAccommodationOffers] = useState([]);
-  const [selectedTrip, setSelectedTrip] = useState(null);
-  const [showAccommodationOffers, setShowAccommodationOffers] = useState(false);
+interface Trip {
+  id: number;
+  category_id: number;
+  title: string;
+  slug: string;
+  description: string;
+  price: string;
+  original_price: string;
+  discount_percentage: number;
+  image_url: string;
+  duration_days: number;
+  max_participants: number | null;
+  highlights: string;
+  category: {
+    id: number;
+    name: string;
+    slug: string;
+    icon: string;
+    description: string;
+  };
+}
+
+interface Category {
+  id: number;
+  name: string;
+  slug: string;
+  icon: string;
+  description: string;
+}
+
+const iconMap: Record<string, React.ComponentType<any>> = {
+  lotus: Lotus,
+  music: Music,
+  tree: Tree,
+  family: Family,
+  factory: Factory,
+  dog: Dog,
+  home: Home,
+  landmark: Landmark,
+  heart: Heart,
+  dance: Dance
+};
+
+const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({ 
+  maxPrice, 
+  selectedType, 
+  searchQuery 
+}) => {
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [selectedTrip, setSelectedTrip] = useState<string | null>(null);
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const controller = new AbortController();
-    const fetchTripsAndAccommodations = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const [tripsRes, accommodationsRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/trips`, { signal: controller.signal }),
-          fetch(`${API_BASE_URL}/accommodation-offers`, { signal: controller.signal })
-        ]);
+        setError(null);
         
-        if (!tripsRes.ok || !accommodationsRes.ok) throw new Error("Failed to fetch data");
+        // Fetch trips
+        const tripsResponse = await fetch('http://127.0.0.1:8000/api/trips');
+        if (!tripsResponse.ok) throw new Error('Failed to fetch trips');
+        const tripsData = await tripsResponse.json();
+        setTrips(tripsData.data || []);
 
-        const [tripsData, accommodationsData] = await Promise.all([
-          tripsRes.json(),
-          accommodationsRes.json()
-        ]);
+        // Fetch categories
+        const categoriesResponse = await fetch('http://127.0.0.1:8000/api/trip-categories');
+        if (!categoriesResponse.ok) throw new Error('Failed to fetch categories');
+        const categoriesData = await categoriesResponse.json();
+        setCategories(categoriesData || []);
 
-        const formattedTrips = tripsData.map(trip => ({
-          ...trip,
-          highlights: typeof trip.highlights === "string" ? JSON.parse(trip.highlights) : trip.highlights || [],
-          included: typeof trip.included === "string" ? JSON.parse(trip.included) : trip.included || [],
-        }));
-
-        setTrips(formattedTrips);
-        setAccommodationOffers(accommodationsData || []);
       } catch (err) {
-        if (err.name !== "AbortError") {
-          setError("Failed to load data. Please try again.");
-        }
+        setError(err instanceof Error ? err.message : 'An unknown error occurred');
+        console.error('Fetch error:', err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTripsAndAccommodations();
-    return () => controller.abort();
+    fetchData();
   }, []);
 
-  const filteredTrips = useMemo(() => {
-    return trips
-      .filter(trip => !selectedType || trip.type === selectedType)
-      .filter(trip => parseFloat(trip.price) <= maxPrice)
-      .filter(trip => trip.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      trip.description.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [trips, maxPrice, selectedType, searchQuery]);
+  const handleBook = (tripSlug: string) => {
+    console.log('Booking trip:', tripSlug);
+    // Add your booking logic here
+  };
 
-  if (loading) return <p className="text-gray-600">Loading trips...</p>;
-  if (error) return <p className="text-red-600">{error}</p>;
+  const filteredTrips = trips.filter(trip => {
+    // Check if trip has a category
+    if (!trip.category) return false;
+    
+    // Apply filters
+    const matchesCategory = !activeCategory || trip.category.slug === activeCategory;
+    const matchesPrice = parseFloat(trip.price) <= maxPrice;
+    const matchesSearch = searchQuery === '' || 
+      trip.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      trip.description.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    return matchesCategory && matchesPrice && matchesSearch;
+  });
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12 bg-red-50 rounded-xl">
+        <Info className="h-12 w-12 text-red-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-red-900 mb-2">Error loading trips</h3>
+        <p className="text-red-600">{error}</p>
+      </div>
+    );
+  }
 
   if (selectedTrip) {
-    const trip = trips.find(t => t.id === selectedTrip);
+    const trip = trips.find(t => t.slug === selectedTrip);
     if (!trip) return null;
 
     return (
@@ -74,73 +145,86 @@ const ShortTripsSection = ({ maxPrice, selectedType, searchQuery }) => {
         >
           ← Back to All Trips
         </button>
-        <TripDetails {...trip} />
+        <TripDetails 
+          id={trip.slug}
+          type={trip.category.slug}
+          name={trip.title}
+          description={trip.description}
+          price={parseFloat(trip.price)}
+          originalPrice={parseFloat(trip.original_price)}
+          discountPercentage={trip.discount_percentage}
+          image={trip.image_url}
+          highlights={trip.highlights ? JSON.parse(trip.highlights) : []}
+          maxParticipants={trip.max_participants || 0}
+          onBook={() => handleBook(trip.slug)}
+        />
       </div>
     );
   }
 
   return (
     <div className="p-4 space-y-8">
-      <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl p-6 text-white flex justify-between items-center">
-        <div>
-          <h3 className="text-2xl font-bold mb-2 flex items-center gap-2">
-            <Gift className="h-6 w-6" /> Special Offers & Discounts
-          </h3>
-          <p>Limited-time deals on trips and accommodations</p>
-        </div>
-        <button
-          onClick={() => setShowAccommodationOffers(!showAccommodationOffers)}
-          className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
-        >
-          <Hotel className="h-5 w-5" /> View Hotel Deals
-        </button>
+      {/* Category Selection */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {categories.map(category => {
+          const IconComponent = iconMap[category.icon] || Info;
+          return (
+            <button
+              key={category.id}
+              onClick={() => setActiveCategory(activeCategory === category.slug ? null : category.slug)}
+              className={`p-4 rounded-xl border-2 transition-all ${
+                activeCategory === category.slug
+                  ? 'border-purple-600 bg-purple-50'
+                  : 'border-gray-200 hover:border-purple-200'
+              }`}
+            >
+              <div className="flex flex-col items-center text-center gap-2">
+                <IconComponent className={`h-6 w-6 ${
+                  activeCategory === category.slug ? 'text-purple-600' : 'text-gray-500'
+                }`} />
+                <h3 className={`font-medium ${
+                  activeCategory === category.slug ? 'text-purple-600' : 'text-gray-700'
+                }`}>
+                  {category.name}
+                </h3>
+                <p className="text-sm text-gray-600">{category.description}</p>
+              </div>
+            </button>
+          );
+        })}
       </div>
 
-      {showAccommodationOffers && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {accommodationOffers.map(offer => (
-            <AccommodationCard key={offer.id} {...offer} />
-          ))}
+      {/* Trips Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredTrips.map(trip => (
+          <div key={trip.slug} className="relative">
+            <div className="absolute top-4 right-4 z-10 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+              {trip.discount_percentage}% OFF
+            </div>
+            <TripCard
+              id={trip.slug}
+              type={trip.category.slug}
+              name={trip.title}
+              description={trip.description}
+              price={parseFloat(trip.price)}
+              originalPrice={parseFloat(trip.original_price)}
+              discountPercentage={trip.discount_percentage}
+              image={trip.image_url}
+              onClick={() => setSelectedTrip(trip.slug)}
+            />
+          </div>
+        ))}
+      </div>
+
+      {filteredTrips.length === 0 && !loading && (
+        <div className="text-center py-12 bg-gray-50 rounded-xl">
+          <Info className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No trips found</h3>
+          <p className="text-gray-600">
+            Try adjusting your filters or search criteria
+          </p>
         </div>
       )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredTrips.length > 0 ? (
-          filteredTrips.map(trip => (
-            <div key={trip.id} className="relative">
-              {trip.discount_percentage > 0 && (
-                <div className="absolute top-4 right-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
-                  <Tag className="h-4 w-4" /> {trip.discount_percentage}% OFF
-                </div>
-              )}
-              <TripCard {...trip} onClick={() => setSelectedTrip(trip.id)} />
-            </div>
-          ))
-        ) : (
-          <p className="text-gray-600">No trips found matching your criteria.</p>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const AccommodationCard = ({ name, image, price, original_price, discount, description, valid_until }) => {
-  return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-      <img src={image} alt={name} className="w-full h-48 object-cover" />
-      <div className="p-6">
-        <h3 className="text-lg font-semibold">{name}</h3>
-        <p className="text-gray-600">{description}</p>
-        <div className="flex items-center justify-between mt-4">
-          <p className="text-2xl font-bold text-purple-600">€{price}</p>
-          <p className="text-sm text-gray-500 line-through">€{original_price}</p>
-        </div>
-        <div className="text-red-600 text-sm mt-2 flex items-center gap-1">
-          <Check className="h-4 w-4 text-green-500" /> {discount}% OFF
-        </div>
-        <p className="text-xs text-gray-500 mt-1">Valid until {new Date(valid_until).toLocaleDateString()}</p>
-        <button className="bg-purple-600 text-white px-4 py-2 rounded-lg mt-4 transition-colors">Book Now</button>
-      </div>
     </div>
   );
 };
