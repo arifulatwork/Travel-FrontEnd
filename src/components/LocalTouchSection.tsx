@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, Star, Clock, MapPin, Heart, Coffee, Music, Utensils, Palette, Search, X, Calendar, Info, Check, CreditCard, ChevronDown, Sun, Moon } from 'lucide-react';
 
 interface Experience {
@@ -42,170 +42,29 @@ const LocalTouchSection: React.FC = () => {
   });
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
   const [showPaymentButton, setShowPaymentButton] = useState(false);
+  const [experiences, setExperiences] = useState<Experience[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const experiences: Experience[] = [
-    // Existing Barcelona Experiences
-    {
-      id: 'paella-cooking',
-      type: 'food',
-      name: 'Traditional Paella Cooking Class',
-      description: 'Learn to cook authentic Valencian paella with a local chef',
-      price: 65,
-      rating: 4.9,
-      reviews: 128,
-      location: 'Gothic Quarter',
-      city: 'Barcelona',
-      duration: '3 hours',
-      maxParticipants: 8,
-      image: 'https://images.unsplash.com/photo-1534080564583-6be75777b70a?auto=format&fit=crop&w=800&q=80',
-      host: {
-        name: 'Chef Maria',
-        rating: 4.9,
-        reviews: 245,
-        image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&h=120&q=80'
+  // Fetch experiences from Laravel backend
+  useEffect(() => {
+    const fetchExperiences = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/api/experiences'); // Replace with your Laravel API endpoint
+        if (!response.ok) {
+          throw new Error('Failed to fetch experiences');
+        }
+        const data = await response.json();
+        setExperiences(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      } finally {
+        setLoading(false);
       }
-    },
-    // German Experiences - Berlin
-    {
-      id: 'berlin-street-art',
-      type: 'craft',
-      name: 'Berlin Street Art Workshop',
-      description: 'Create urban art with local street artists in Kreuzberg',
-      price: 45,
-      rating: 4.8,
-      reviews: 92,
-      location: 'Kreuzberg',
-      city: 'Berlin',
-      duration: '3 hours',
-      maxParticipants: 10,
-      image: 'https://images.unsplash.com/photo-1511735111819-9a3f7709049c?auto=format&fit=crop&w=800&q=80',
-      host: {
-        name: 'Max Weber',
-        rating: 4.8,
-        reviews: 156
-      }
-    },
-    // Croatian Experiences - Split
-    {
-      id: 'dalmatian-cooking',
-      type: 'food',
-      name: 'Dalmatian Cooking Experience',
-      description: 'Learn traditional Dalmatian recipes in a family home',
-      price: 75,
-      rating: 4.9,
-      reviews: 84,
-      location: 'Old Town',
-      city: 'Split',
-      duration: '4 hours',
-      maxParticipants: 6,
-      image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80',
-      host: {
-        name: 'Ana Kovač',
-        rating: 4.9,
-        reviews: 134
-      }
-    },
-    // French Experiences - Paris
-    {
-      id: 'paris-patisserie',
-      type: 'food',
-      name: 'French Pastry Masterclass',
-      description: 'Master the art of French pastry with a professional pâtissier',
-      price: 85,
-      rating: 4.8,
-      reviews: 176,
-      location: 'Le Marais',
-      city: 'Paris',
-      duration: '3 hours',
-      maxParticipants: 8,
-      image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80',
-      host: {
-        name: 'Pierre Dubois',
-        rating: 4.9,
-        reviews: 312
-      }
-    },
-    // Italian Experiences - Rome
-    {
-      id: 'rome-pasta-making',
-      type: 'food',
-      name: 'Traditional Pasta Making Class',
-      description: 'Learn the secrets of homemade pasta from a Roman nonna',
-      price: 70,
-      rating: 4.9,
-      reviews: 245,
-      location: 'Trastevere',
-      city: 'Rome',
-      duration: '3 hours',
-      maxParticipants: 8,
-      image: 'https://images.unsplash.com/photo-1556760544-74068565f05c?auto=format&fit=crop&w=800&q=80',
-      host: {
-        name: 'Nonna Maria',
-        rating: 5.0,
-        reviews: 189
-      }
-    },
-    // Albanian Experiences - Tirana
-    {
-      id: 'tirana-traditional-music',
-      type: 'music',
-      name: 'Albanian Folk Music Workshop',
-      description: 'Learn traditional Albanian instruments and songs',
-      price: 40,
-      rating: 4.7,
-      reviews: 56,
-      location: 'City Center',
-      city: 'Tirana',
-      duration: '2 hours',
-      maxParticipants: 10,
-      image: 'https://images.unsplash.com/photo-1511735111819-9a3f7709049c?auto=format&fit=crop&w=800&q=80',
-      host: {
-        name: 'Arben Skenderi',
-        rating: 4.8,
-        reviews: 78
-      }
-    },
-    // Additional German Experience - Munich
-    {
-      id: 'munich-beer-crafting',
-      type: 'craft',
-      name: 'Bavarian Beer Crafting',
-      description: 'Learn traditional German beer brewing techniques',
-      price: 80,
-      rating: 4.8,
-      reviews: 167,
-      location: 'Altstadt',
-      city: 'Munich',
-      duration: '4 hours',
-      maxParticipants: 8,
-      image: 'https://images.unsplash.com/photo-1505075106905-fb052892c116?auto=format&fit=crop&w=800&q=80',
-      host: {
-        name: 'Hans Schmidt',
-        rating: 4.9,
-        reviews: 203
-      }
-    },
-    // Additional Croatian Experience - Dubrovnik
-    {
-      id: 'dubrovnik-music',
-      type: 'music',
-      name: 'Klapa Singing Workshop',
-      description: 'Experience traditional Dalmatian a cappella singing',
-      price: 35,
-      rating: 4.7,
-      reviews: 89,
-      location: 'Old Town',
-      city: 'Dubrovnik',
-      duration: '2 hours',
-      maxParticipants: 12,
-      image: 'https://images.unsplash.com/photo-1555990538-c48aa0d12c47?auto=format&fit=crop&w=800&q=80',
-      host: {
-        name: 'Marko Perić',
-        rating: 4.8,
-        reviews: 134
-      }
-    }
-  ];
+    };
+
+    fetchExperiences();
+  }, []);
 
   const cities = Array.from(new Set(experiences.map(exp => exp.city)));
 
@@ -240,6 +99,14 @@ const LocalTouchSection: React.FC = () => {
       });
     }, 2000);
   };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
 
   return (
     <div className="space-y-6">
