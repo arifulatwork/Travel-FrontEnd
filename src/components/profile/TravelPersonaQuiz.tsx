@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Compass, Heart, Clock, Sun, Moon, Users, Wallet, Activity, Globe, Check, User, Home, Star, Calendar, Camera, Trees as Tree, Utensils, Bed } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Compass, Heart, Clock, Sun, Moon, Users, Wallet, Activity, Globe, Check, User, Home, Star, Calendar, Camera, Trees as Tree, Utensils, Bed, Space as Peace, Search, MapPin, DollarSign } from 'lucide-react';
 
 interface Question {
   id: string;
@@ -9,8 +9,10 @@ interface Question {
     label: string;
     icon?: React.ElementType;
     description?: string;
+    emoji?: string;
   }[];
   multiple?: boolean;
+  hasBudgetSlider?: boolean;
 }
 
 interface TravelPersonaQuizProps {
@@ -20,61 +22,49 @@ interface TravelPersonaQuizProps {
 
 const questions: Question[] = [
   {
-    id: 'pace',
-    text: 'What\'s your preferred travel pace?',
+    id: 'travelReason',
+    text: 'Why do you travel?',
     options: [
-      { value: 'relaxed', label: 'Relaxed & Easy', icon: Sun, description: 'Take it slow, enjoy each moment' },
-      { value: 'balanced', label: 'Balanced', icon: Clock, description: 'Mix of activities and downtime' },
-      { value: 'active', label: 'Fast & Full', icon: Activity, description: 'Pack in as much as possible' }
+      { value: 'peace', label: 'Peace', description: 'I want to disconnect and recharge', emoji: '🧘‍♀️', icon: Peace },
+      { value: 'exploration', label: 'Exploration', description: 'I\'m curious and want to see new things', emoji: '🔍', icon: Search },
+      { value: 'connection', label: 'Connection', description: 'I want to meet people and bond', emoji: '🧑‍🤝‍🧑', icon: Users },
+      { value: 'escape', label: 'Escape', description: 'I need a break from my routine', emoji: '✈️', icon: Compass },
+      { value: 'adventure', label: 'Adventure', description: 'I live for thrills and challenges', emoji: '🗺️', icon: Activity }
     ]
   },
   {
-    id: 'companionship',
-    text: 'How do you prefer to travel?',
+    id: 'environment',
+    text: 'What kind of environment do you vibe with?',
     options: [
-      { value: 'solo', label: 'Solo', icon: User, description: 'Independent exploration' },
-      { value: 'couple', label: 'With Partner', icon: Heart, description: 'Romantic getaways' },
-      { value: 'group', label: 'With Group', icon: Users, description: 'Social adventures' },
-      { value: 'family', label: 'With Family', icon: Home, description: 'Family-friendly experiences' }
+      { value: 'quiet', label: 'Quiet & Secluded', description: 'Far from the crowds', emoji: '🌿', icon: Tree },
+      { value: 'mixed', label: 'Half & Half', description: 'I like peaceful moments and energy', emoji: '🏙️', icon: MapPin },
+      { value: 'bustling', label: 'Bustling & Lively', description: 'I love busy streets and action', emoji: '🎡', icon: Users }
     ]
   },
   {
-    id: 'interests',
-    text: 'What interests you most when traveling?',
-    multiple: true,
+    id: 'budgetPreference',
+    text: 'Do you want us to filter trips by your budget?',
+    hasBudgetSlider: true,
     options: [
-      { value: 'culture', label: 'Culture & History', icon: Globe },
-      { value: 'food', label: 'Food & Drink', icon: Utensils },
-      { value: 'nature', label: 'Nature & Outdoors', icon: Tree },
-      { value: 'adventure', label: 'Adventure & Sports', icon: Compass },
-      { value: 'relaxation', label: 'Wellness & Relaxation', icon: Heart },
-      { value: 'photography', label: 'Photography & Art', icon: Camera }
+      { value: 'yes', label: 'Yes, show me trips within my budget', emoji: '✅', icon: Check },
+      { value: 'no', label: 'No, show me everything', emoji: '⛔', icon: DollarSign }
     ]
   },
   {
-    id: 'accommodation',
-    text: 'What\'s your preferred accommodation style?',
-    options: [
-      { value: 'luxury', label: 'Luxury', icon: Star, description: 'High-end hotels and resorts' },
-      { value: 'boutique', label: 'Boutique', icon: Home, description: 'Unique, charming properties' },
-      { value: 'comfort', label: 'Comfort', icon: Bed, description: 'Mid-range hotels' },
-      { value: 'budget', label: 'Budget', icon: Wallet, description: 'Hostels and guesthouses' }
-    ]
-  },
-  {
-    id: 'planning',
+    id: 'planningStyle',
     text: 'How do you like to plan your trips?',
     options: [
-      { value: 'structured', label: 'Fully Planned', icon: Calendar, description: 'Detailed itineraries' },
-      { value: 'flexible', label: 'Flexible', icon: Clock, description: 'Rough plan with room for changes' },
-      { value: 'spontaneous', label: 'Spontaneous', icon: Compass, description: 'Go with the flow' }
+      { value: 'planned', label: 'Fully Planned', description: 'Detailed itineraries', emoji: '📋', icon: Calendar },
+      { value: 'flexible', label: 'Flexible', description: 'Rough plan with room for changes', emoji: '🧭', icon: Compass },
+      { value: 'spontaneous', label: 'Spontaneous', description: 'Go with the flow', emoji: '🌊', icon: Activity }
     ]
   }
 ];
 
 const TravelPersonaQuiz: React.FC<TravelPersonaQuizProps> = ({ onComplete, initialAnswers = {} }) => {
-  const [answers, setAnswers] = useState<Record<string, string | string[]>>(initialAnswers);
+  const [answers, setAnswers] = useState<Record<string, string | string[] | number>>(initialAnswers);
   const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [budgetValue, setBudgetValue] = useState(500); // Default budget value
 
   const handleAnswer = (questionId: string, value: string) => {
     const question = questions[currentQuestion];
@@ -98,6 +88,12 @@ const TravelPersonaQuiz: React.FC<TravelPersonaQuizProps> = ({ onComplete, initi
         ...answers,
         [questionId]: value
       };
+
+      // If this is the budget question and the answer is "yes", include the budget value
+      if (questionId === 'budgetPreference' && value === 'yes') {
+        newAnswers.budgetAmount = budgetValue;
+      }
+
       if (currentQuestion < questions.length - 1) {
         setCurrentQuestion(currentQuestion + 1);
       }
@@ -111,6 +107,10 @@ const TravelPersonaQuiz: React.FC<TravelPersonaQuizProps> = ({ onComplete, initi
     }
   };
 
+  const handleBudgetChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setBudgetValue(parseInt(event.target.value));
+  };
+
   const question = questions[currentQuestion];
   const isAnswered = answers[question.id];
   const isMultiple = question.multiple;
@@ -119,7 +119,7 @@ const TravelPersonaQuiz: React.FC<TravelPersonaQuizProps> = ({ onComplete, initi
     <div className="bg-white rounded-xl shadow-sm p-6 space-y-6">
       <div className="space-y-4">
         <h3 className="text-xl font-semibold text-gray-900">{question.text}</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           {question.options.map((option) => {
             const isSelected = isMultiple 
               ? (answers[question.id] as string[] || []).includes(option.value)
@@ -142,13 +142,16 @@ const TravelPersonaQuiz: React.FC<TravelPersonaQuizProps> = ({ onComplete, initi
                     }`} />
                   )}
                   <div className="text-left">
-                    <p className={`font-medium ${
-                      isSelected ? 'text-purple-600' : 'text-gray-900'
-                    }`}>
-                      {option.label}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">{option.emoji}</span>
+                      <p className={`font-medium ${
+                        isSelected ? 'text-purple-600' : 'text-gray-900'
+                      }`}>
+                        {option.label}
+                      </p>
+                    </div>
                     {option.description && (
-                      <p className="text-sm text-gray-500">{option.description}</p>
+                      <p className="text-sm text-gray-500 mt-1">{option.description}</p>
                     )}
                   </div>
                 </div>
@@ -158,6 +161,28 @@ const TravelPersonaQuiz: React.FC<TravelPersonaQuizProps> = ({ onComplete, initi
               </button>
             );
           })}
+
+          {/* Budget Slider */}
+          {question.hasBudgetSlider && answers[question.id] === 'yes' && (
+            <div className="mt-4 p-4 bg-purple-50 rounded-lg">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select your budget range (€{budgetValue})
+              </label>
+              <input
+                type="range"
+                min="100"
+                max="1000"
+                step="50"
+                value={budgetValue}
+                onChange={handleBudgetChange}
+                className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+              />
+              <div className="flex justify-between text-sm text-gray-500 mt-2">
+                <span>€100</span>
+                <span>€1000</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

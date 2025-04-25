@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { profileApi, type Profile, type ProfileSettings } from '../lib/profile';
 import TravelPersonaQuiz from './profile/TravelPersonaQuiz';
 import TravelPersonaResults from './profile/TravelPersonaResults';
+import { supabase } from '../lib/supabase';
 
 interface CreditCardType {
   id: string;
@@ -46,11 +47,53 @@ const ProfileSection: React.FC = () => {
   const loadProfile = async () => {
     try {
       if (!user) return;
-      const data = await profileApi.getProfile(user.id);
-      setProfile(data);
-      if (data.preferences?.travelPersona) {
-        setPersonaAnswers(data.preferences.travelPersona);
+      
+      // First try to get existing profile
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      // If no profile exists, create one with default values
+      if (fetchError && fetchError.message.includes('no rows')) {
+        const defaultProfile = {
+          id: user.id,
+          username: null,
+          full_name: 'New User',
+          settings: {
+            notifications: {
+              push: true,
+              email: true,
+              marketing: false
+            },
+            appearance: {
+              darkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
+              fontSize: 'medium'
+            },
+            language: 'en',
+            currency: 'EUR'
+          },
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert(defaultProfile)
+          .select()
+          .single();
+
+        if (createError) throw createError;
+        setProfile(newProfile);
+      } else if (existingProfile) {
+        setProfile(existingProfile);
+        if (existingProfile.preferences?.travelPersona) {
+          setPersonaAnswers(existingProfile.preferences.travelPersona);
+        }
       }
+
+      setError(null);
     } catch (err) {
       console.error('Error loading profile:', err);
       setError('Failed to load profile');
@@ -113,21 +156,32 @@ const ProfileSection: React.FC = () => {
   };
 
   const handlePersonaComplete = async (answers: Record<string, string | string[]>) => {
-    setPersonaAnswers(answers);
-    setShowPersonaQuiz(false);
+    if (!user || !profile) return;
 
-    if (user && profile) {
-      try {
-        await profileApi.updateProfile(user.id, {
-          ...profile,
-          preferences: {
-            ...profile.preferences,
-            travelPersona: answers
-          }
-        });
-      } catch (err) {
-        console.error('Error saving travel persona:', err);
-      }
+    try {
+      const updatedProfile = {
+        ...profile,
+        preferences: {
+          ...profile.preferences,
+          travelPersona: answers
+        }
+      };
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .update(updatedProfile)
+        .eq('id', user.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setProfile(data);
+      setPersonaAnswers(answers);
+      setShowPersonaQuiz(false);
+    } catch (err) {
+      console.error('Error saving travel persona:', err);
+      setError('Failed to save travel persona');
     }
   };
 
