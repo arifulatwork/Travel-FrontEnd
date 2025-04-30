@@ -21,7 +21,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, darkMo
   const tabs = [
     { id: 'explore', icon: Map, label: translations.explore },
     { id: 'profile', icon: User, label: translations.profile },
-    { id: 'tokens', icon: CreditCard, label: translations.tokens },
+    // { id: 'tokens', icon: CreditCard, label: translations.tokens },
     { id: 'weather', icon: Cloud, label: translations.weather },
     { id: 'messages', icon: MessageCircle, label: translations.messages },
     { id: 'networking', icon: Users, label: translations.networking },
