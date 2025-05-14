@@ -1,28 +1,28 @@
-import React, { useState } from 'react';
-import { Users, Star, Clock, MapPin, Heart, Coffee, Music, Utensils, Palette, Search, X, Calendar, Info, Check, CreditCard, ChevronDown, Sun, Moon, Award, Leaf, Wine, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Users, Star, Clock, MapPin, Heart, Music, Utensils, Palette, X, Info, Check, CreditCard, ChevronDown, Sun, Moon, Award, Leaf, Wine, Sparkles } from 'lucide-react';
 
 interface Experience {
-  id: string;
+  id: number;
   type: 'food' | 'music' | 'craft';
   name: string;
   description: string;
-  price: number;
+  price: number; // Changed from string to number
   rating: number;
   reviews: number;
   location: string;
   duration: string;
-  maxParticipants: number;
+  max_participants: number;
   image: string;
   city: string;
   host: {
     name: string;
     rating: number;
     reviews: number;
-    image?: string;
+    image: string | null;
   };
-  highlights?: string[]; // Added highlights array
-  whyChoose?: { // Added structured why choose reasons
-    icon: React.ReactNode;
+  highlights: string[];
+  why_choose: {
+    icon: string;
     title: string;
     description: string;
   }[];
@@ -48,223 +48,54 @@ const LocalTouchSection: React.FC = () => {
   });
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
   const [showPaymentButton, setShowPaymentButton] = useState(false);
+  const [experiences, setExperiences] = useState<Experience[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const experiences: Experience[] = [
-    // Existing Barcelona Experiences
-    {
-      id: 'paella-cooking',
-      type: 'food',
-      name: 'Traditional Paella Cooking Class',
-      description: 'Learn to cook authentic Valencian paella with a local chef',
-      price: 65,
-      rating: 4.9,
-      reviews: 128,
-      location: 'Gothic Quarter',
-      city: 'Barcelona',
-      duration: '3 hours',
-      maxParticipants: 8,
-      image: 'https://images.unsplash.com/photo-1534080564583-6be75777b70a?auto=format&fit=crop&w=800&q=80',
-      host: {
-        name: 'Chef Maria',
-        rating: 4.9,
-        reviews: 245,
-        image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&h=120&q=80'
-      },
-      highlights: [
-        'Authentic family recipe passed down for generations',
-        'Fresh ingredients from La Boqueria market',
-        'Enjoy your creation with local wines'
-      ],
-      whyChoose: [
-        {
-          icon: <Award className="h-5 w-5 text-purple-600" />,
-          title: "Award-Winning Chef",
-          description: "Learn from a chef featured in Spain's top culinary magazines"
-        },
-        {
-          icon: <Leaf className="h-5 w-5 text-purple-600" />,
-          title: "Farm-to-Table",
-          description: "Ingredients sourced directly from local producers"
-        },
-        {
-          icon: <Wine className="h-5 w-5 text-purple-600" />,
-          title: "Wine Pairing",
-          description: "Includes tasting of 3 regional wines with your meal"
+  // Fetch experiences from API
+  useEffect(() => {
+    const fetchExperiences = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/api/experiences');
+        if (!response.ok) {
+          throw new Error('Failed to fetch experiences');
         }
-      ]
-    },
-    // Italian Experiences - Rome
-    {
-      id: 'rome-pasta-making',
-      type: 'food',
-      name: 'Traditional Pasta Making Class',
-      description: 'Learn the secrets of homemade pasta from a Roman nonna in her Trastevere kitchen. Includes wine pairing.',
-      price: 70,
-      rating: 4.9,
-      reviews: 245,
-      location: 'Trastevere',
-      city: 'Rome',
-      duration: '3 hours',
-      maxParticipants: 8,
-      image: 'https://images.unsplash.com/photo-1556760544-74068565f05c?auto=format&fit=crop&w=800&q=80',
-      host: {
-        name: 'Nonna Maria',
-        rating: 5.0,
-        reviews: 189
-      },
-      highlights: [
-        'Hands-on pasta making with traditional tools',
-        'Secret family recipes from rural Lazio',
-        'Dine on your creations with local wines'
-      ],
-      whyChoose: [
-        {
-          icon: <Sparkles className="h-5 w-5 text-purple-600" />,
-          title: "Generational Wisdom",
-          description: "Learn techniques perfected over 60 years of pasta making"
-        },
-        {
-          icon: <Utensils className="h-5 w-5 text-purple-600" />,
-          title: "Authentic Setting",
-          description: "Cook in a real Roman home kitchen in historic Trastevere"
-        },
-        {
-          icon: <Wine className="h-5 w-5 text-purple-600" />,
-          title: "Complete Experience",
-          description: "Includes antipasti, two pasta types, dessert and wine"
-        }
-      ]
-    },
-    // German Experiences - Berlin
-    {
-      id: 'berlin-street-art',
-      type: 'craft',
-      name: 'Berlin Street Art Workshop',
-      description: 'Create urban art with local street artists in Kreuzberg',
-      price: 45,
-      rating: 4.8,
-      reviews: 92,
-      location: 'Kreuzberg',
-      city: 'Berlin',
-      duration: '3 hours',
-      maxParticipants: 10,
-      image: 'https://images.unsplash.com/photo-1511735111819-9a3f7709049c?auto=format&fit=crop&w=800&q=80',
-      host: {
-        name: 'Max Weber',
-        rating: 4.8,
-        reviews: 156
-      },
-      highlights: [
-        'Legal walls with iconic Berlin graffiti history',
-        'All materials provided - no experience needed',
-        'Take home your own urban artwork'
-      ],
-      whyChoose: [
-        {
-          icon: <Palette className="h-5 w-5 text-purple-600" />,
-          title: "Local Experts",
-          description: "Learn from artists who've worked with Berlin's top collectives"
-        },
-        {
-          icon: <MapPin className="h-5 w-5 text-purple-600" />,
-          title: "Iconic Location",
-          description: "Create art where Berlin's street art movement began"
-        },
-        {
-          icon: <Award className="h-5 w-5 text-purple-600" />,
-          title: "Unique Souvenir",
-          description: "Leave with artwork you created and photos of the process"
-        }
-      ]
-    },
-    // Croatian Experiences - Split
-    {
-      id: 'dalmatian-cooking',
-      type: 'food',
-      name: 'Dalmatian Cooking Experience',
-      description: 'Learn traditional Dalmatian recipes in a family home overlooking the Adriatic',
-      price: 75,
-      rating: 4.9,
-      reviews: 84,
-      location: 'Old Town',
-      city: 'Split',
-      duration: '4 hours',
-      maxParticipants: 6,
-      image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80',
-      host: {
-        name: 'Ana Kovač',
-        rating: 4.9,
-        reviews: 134
-      },
-      highlights: [
-        'Seaside cooking with panoramic views',
-        'Authentic peka cooking technique',
-        'Includes homemade rakija tasting'
-      ],
-      whyChoose: [
-        {
-          icon: <Sun className="h-5 w-5 text-purple-600" />,
-          title: "Breathtaking Setting",
-          description: "Cook with Adriatic Sea views from a terrace vineyard"
-        },
-        {
-          icon: <Leaf className="h-5 w-5 text-purple-600" />,
-          title: "Hyper-Local",
-          description: "Ingredients from host's garden and local fishermen"
-        },
-        {
-          icon: <Wine className="h-5 w-5 text-purple-600" />,
-          title: "Cultural Immersion",
-          description: "Learn about Dalmatian traditions beyond just cooking"
-        }
-      ]
-    },
-    // Additional German Experience - Munich
-    {
-      id: 'munich-beer-crafting',
-      type: 'craft',
-      name: 'Bavarian Beer Crafting',
-      description: 'Learn traditional German beer brewing techniques from a master brewer',
-      price: 80,
-      rating: 4.8,
-      reviews: 167,
-      location: 'Altstadt',
-      city: 'Munich',
-      duration: '4 hours',
-      maxParticipants: 8,
-      image: 'https://images.unsplash.com/photo-1505075106905-fb052892c116?auto=format&fit=crop&w=800&q=80',
-      host: {
-        name: 'Hans Schmidt',
-        rating: 4.9,
-        reviews: 203
-      },
-      highlights: [
-        'Hands-on brewing with traditional equipment',
-        'Taste rare Bavarian beer varieties',
-        'Certificate of completion'
-      ],
-      whyChoose: [
-        {
-          icon: <Award className="h-5 w-5 text-purple-600" />,
-          title: "Master Brewer",
-          description: "Learn from a 4th generation brewing family"
-        },
-        {
-          icon: <Sparkles className="h-5 w-5 text-purple-600" />,
-          title: "Exclusive Access",
-          description: "Visit a brewery normally closed to the public"
-        },
-        {
-          icon: <Utensils className="h-5 w-5 text-purple-600" />,
-          title: "Complete Package",
-          description: "Includes tasting flight and brewing handbook"
-        }
-      ]
-    }
-  ];
+        const data = await response.json();
+        
+        // Process the data to ensure consistent types
+        const processedData = data.map((exp: any) => {
+          const host = typeof exp.host === 'string' ? JSON.parse(exp.host) : exp.host;
+          const highlights = typeof exp.highlights === 'string' ? JSON.parse(exp.highlights) : exp.highlights;
+          const why_choose = typeof exp.why_choose === 'string' ? JSON.parse(exp.why_choose) : exp.why_choose;
+          
+          return {
+            ...exp,
+            price: parseFloat(exp.price),
+            host: {
+              ...host,
+              rating: typeof host.rating === 'string' ? parseFloat(host.rating) : host.rating,
+              reviews: typeof host.reviews === 'string' ? parseInt(host.reviews) : host.reviews
+            },
+            highlights,
+            why_choose
+          };
+        });
+        
+        setExperiences(processedData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      } finally {
+        setLoading(false);
+      }
+    };
 
+    fetchExperiences();
+  }, []);
+
+  // Get unique cities from experiences
   const cities = Array.from(new Set(experiences.map(exp => exp.city)));
 
+  // Filter experiences based on selected filters
   const filteredExperiences = experiences.filter(exp => 
     (!selectedType || exp.type === selectedType) &&
     (!selectedCity || exp.city === selectedCity)
@@ -296,6 +127,24 @@ const LocalTouchSection: React.FC = () => {
     }, 2000);
   };
 
+  // Get icon component by name
+  const getIconComponent = (iconName: string) => {
+    const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+      Award,
+      Leaf,
+      Wine,
+      Sparkles,
+      Utensils,
+      Music,
+      Palette,
+      Sun,
+      Moon
+    };
+    
+    const Icon = iconMap[iconName] || Info;
+    return <Icon className="h-5 w-5 text-purple-600" />;
+  };
+
   const renderWhyChoose = (experience: Experience) => (
     <div className="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
       <h4 className="font-medium text-sm flex items-center gap-2 text-purple-600 mb-3">
@@ -303,10 +152,10 @@ const LocalTouchSection: React.FC = () => {
         Why choose this experience?
       </h4>
       <div className="space-y-3">
-        {experience.whyChoose?.map((reason, index) => (
+        {experience.why_choose?.map((reason, index) => (
           <div key={index} className="flex gap-3">
             <div className="flex-shrink-0 mt-1">
-              {reason.icon}
+              {getIconComponent(reason.icon)}
             </div>
             <div>
               <h5 className="font-medium text-sm dark:text-white">{reason.title}</h5>
@@ -331,6 +180,14 @@ const LocalTouchSection: React.FC = () => {
       </ul>
     </div>
   );
+
+  if (loading) {
+    return <div className="text-center py-8">Loading experiences...</div>;
+  }
+
+  if (error) {
+    return <div className="text-center py-8 text-red-500">Error: {error}</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -403,7 +260,7 @@ const LocalTouchSection: React.FC = () => {
                   <div key={experience.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
                     <div className="relative h-48">
                       <img
-                        src={experience.image}
+                        src={experience.image.startsWith('http') ? experience.image : `http://localhost:8000/${experience.image}`}
                         alt={experience.name}
                         className="w-full h-full object-cover"
                       />
@@ -424,27 +281,27 @@ const LocalTouchSection: React.FC = () => {
                       {renderHighlights(experience)}
                       
                       <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-4 mt-4">
-                      <div className="flex items-center gap-4">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          {experience.duration}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Users className="h-4 w-4" />
-                          Up to {experience.maxParticipants}
-                        </span>
+                        <div className="flex items-center gap-4">
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-4 w-4" />
+                            {experience.duration}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Users className="h-4 w-4" />
+                            Up to {experience.max_participants}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 text-yellow-500">
+                          <Star className="h-4 w-4 fill-current" />
+                          {experience.rating} ({experience.reviews})
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 text-yellow-500">
-                        <Star className="h-4 w-4 fill-current" />
-                        {experience.rating} ({experience.reviews})
-                      </div>
-                    </div>
                       
                       {renderWhyChoose(experience)}
                       
                       <div className="flex items-center justify-between mt-4">
                         <div>
-                          <p className="text-lg font-semibold dark:text-white">€{experience.price}</p>
+                          <p className="text-lg font-semibold dark:text-white">€{experience.price.toFixed(2)}</p>
                           <p className="text-sm text-gray-500 dark:text-gray-400">per person</p>
                         </div>
                         <button
@@ -498,7 +355,7 @@ const LocalTouchSection: React.FC = () => {
                     className="flex items-center justify-center w-full gap-2 bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors"
                   >
                     <CreditCard className="h-5 w-5" />
-                    Pay Now €{selectedExperience.price * bookingDetails.participants}
+                    Pay Now €{(selectedExperience.price * bookingDetails.participants).toFixed(2)}
                   </button>
                 )}
               </div>
@@ -537,14 +394,14 @@ const LocalTouchSection: React.FC = () => {
                   <input
                     type="number"
                     min="1"
-                    max={selectedExperience.maxParticipants}
+                    max={selectedExperience.max_participants}
                     value={bookingDetails.participants}
                     onChange={(e) => setBookingDetails({ ...bookingDetails, participants: parseInt(e.target.value) })}
                     className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-purple-500 focus:border-purple-500 dark:text-white"
                     required
                   />
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    Maximum {selectedExperience.maxParticipants} participants
+                    Maximum {selectedExperience.max_participants} participants
                   </p>
                 </div>
 
@@ -565,11 +422,11 @@ const LocalTouchSection: React.FC = () => {
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-medium dark:text-white">Total Price</span>
                     <span className="text-lg font-bold dark:text-white">
-                      €{selectedExperience.price * bookingDetails.participants}
+                      €{(selectedExperience.price * bookingDetails.participants).toFixed(2)}
                     </span>
                   </div>
                   <p className="text-sm text-purple-600 dark:text-purple-400">
-                    €{selectedExperience.price} × {bookingDetails.participants} participants
+                    €{selectedExperience.price.toFixed(2)} × {bookingDetails.participants} participants
                   </p>
                 </div>
 
