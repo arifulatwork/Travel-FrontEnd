@@ -164,7 +164,7 @@ const filteredDestinations = destinations.filter(destination =>
           country={destination.country}
           city={destination.city}
           description={destination.description}
-          coordinates={{ lat: 0, lng: 0 }} // Default coordinates
+          coordinates={destination.coordinates} // Default coordinates
           image={destination.image}
           pointsOfInterest={destination.points_of_interest || []}
           attractions={destination.attractions || []}
