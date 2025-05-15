@@ -1,273 +1,116 @@
-import { supabase } from './supabase';
-
 export interface Destination {
-  id: string;
+  id: number;
   country: string;
   city: string;
-  description: string;
+  description?: string;
+  image: string;
+  highlights: string[];
+  cuisine: string[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface PointOfInterest {
+  name: string;
   coordinates: {
     lat: number;
     lng: number;
   };
-  image_url: string;
-  population?: number;
-  timezone?: string;
-  weather_info?: {
-    climate: string;
-    average_temperature: {
-      summer: number;
-      winter: number;
-    };
-    rainy_season: string;
-  };
-  transportation_info?: {
-    metro?: boolean;
-    bus?: boolean;
-    bike_sharing?: boolean;
-    ferry?: boolean;
-    airport?: string;
-    main_stations?: string[];
-  };
-  best_times_to_visit?: string[];
-  local_customs?: string[];
-  emergency_contacts?: {
-    police: string;
-    ambulance: string;
-    fire?: string;
-    emergency?: string;
-    tourist_police?: string;
-    hospitals?: string[];
-  };
-  metadata?: {
-    region: string;
-    highlights: string[];
-    cuisine: string[];
-    unesco_sites: string[];
-  };
-  company_services_metadata?: {
-    business_facilities: string[];
-    corporate_amenities: string[];
-    event_capabilities: string[];
-    business_activities?: string[];
-  };
-  congress_metadata?: {
-    upcoming_events: string[];
-    venues: string[];
-    industries: string[];
-  };
+  type: string;
 }
 
-export interface Activity {
-  id: string;
-  destination_id: string;
-  title: string;
-  description: string;
-  type: 'tour' | 'attraction' | 'restaurant' | 'custom';
-  price: number;
-  group_price?: number;
-  min_group_size?: number;
-  max_group_size?: number;
+export interface Guide {
+  name: string;
+  avatar?: string;
+  rating: number;
+  reviews: number;
+  experience: string;
+  languages: string[];
+}
+
+export interface Attraction {
+  name: string;
+  type: string;
   duration: string;
-  location: string;
-  image_url: string;
-  status: 'active' | 'inactive' | 'sold_out';
-  available_spots: number;
-  metadata?: any;
+  price: number;
+  groupPrice?: number;
+  minGroupSize?: number;
+  maxGroupSize?: number;
+  image: string;
+  highlights: string[];
+  guide?: Guide;
 }
-
-export interface BusinessService {
-  id: string;
-  destination_id: string;
-  service_name: string;
-  service_type: 'conference_hall' | 'event_venue' | 'catering' | 'team_building';
-  description: string;
-  capacity: number;
-  price_range: string;
-  image_url: string;
-  booking_url?: string;
-  features: string[];
-  availability: {
-    availability_hours: string;
-    minimum_booking_hours?: number;
-    setup_time?: string;
-    booking_notice: string;
-    minimum_participants?: number;
-    maximum_participants?: number;
-  };
-}
-
-export interface CongressTicket {
-  id: string;
-  destination_id: string;
-  title: string;
-  description: string;
-  event_type: 'conference' | 'summit' | 'expo' | 'workshop' | 'seminar';
-  start_date: string;
-  end_date: string;
-  venue: string;
-  price_range: string;
-  image_url: string;
-  booking_url?: string;
-  capacity: number;
-  available_tickets: number;
-  early_bird_deadline?: string;
-  early_bird_price?: string;
-  features: string[];
-  schedule: any[];
-  speakers: any[];
-}
-
-const parseCoordinates = (coordinates: string | { lat: number; lng: number }) => {
-  if (typeof coordinates === 'string') {
-    // Handle point format from PostgreSQL: "(lat,lng)"
-    const match = coordinates.match(/\(([-\d.]+),([-\d.]+)\)/);
-    if (match) {
-      return {
-        lat: parseFloat(match[1]),
-        lng: parseFloat(match[2])
-      };
-    }
-  }
-  return coordinates as { lat: number; lng: number };
-};
 
 export const destinationApi = {
-  // Get all destinations with their activities
-  getDestinations: async () => {
-    const { data: destinations, error: destError } = await supabase
-      .from('destinations')
-      .select('*')
-      .order('city');
+  // Fetch all destinations (for Explore cards)
+  getDestinations: async (): Promise<Destination[]> => {
+    const res = await fetch('http://127.0.0.1:8000/api/destinations');
+    if (!res.ok) throw new Error('Failed to fetch destinations.');
+    const data = await res.json();
 
-    if (destError) throw destError;
-
-    // Get activities for all destinations in a single query
-    const { data: activities, error: actError } = await supabase
-      .from('activities')
-      .select('*')
-      .in('destination_id', destinations.map(d => d.id))
-      .eq('status', 'active')
-      .order('price');
-
-    if (actError) throw actError;
-
-    // Parse coordinates and combine with activities
-    return destinations.map(destination => ({
-      ...destination,
-      coordinates: parseCoordinates(destination.coordinates),
-      activities: activities.filter(activity => activity.destination_id === destination.id)
-    })) as (Destination & { activities: Activity[] })[];
+    return data.map((destination: any) => ({
+      id: destination.id,
+      country: destination.country,
+      city: destination.city,
+      image: destination.image,
+      highlights: destination.highlights ? JSON.parse(destination.highlights) : [],
+      cuisine: destination.cuisine ? JSON.parse(destination.cuisine) : [],
+      created_at: destination.created_at,
+      updated_at: destination.updated_at
+    })) as Destination[];
   },
 
-  // Get destination by ID with activities
-  getDestination: async (id: string) => {
-    const { data, error } = await supabase
-      .from('destinations')
-      .select(`
-        *,
-        activities(*)
-      `)
-      .eq('id', id)
-      .single();
+  // Fetch single destination with points of interest and attractions
+  getDestination: async (id: number): Promise<{
+    destination: Destination;
+    points_of_interest: PointOfInterest[];
+    attractions: Attraction[];
+  }> => {
+    const res = await fetch(`http://127.0.0.1:8000/api/destinations/${id}`);
+    if (!res.ok) throw new Error('Failed to fetch destination details.');
+    const data = await res.json();
 
-    if (error) throw error;
+    const destination: Destination = {
+      id: data.id,
+      country: data.country,
+      city: data.city,
+      image: data.image,
+      highlights: data.highlights ? JSON.parse(data.highlights) : [],
+      cuisine: data.cuisine ? JSON.parse(data.cuisine) : [],
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      description: data.description
+    };
 
-    return {
-      ...data,
-      coordinates: parseCoordinates(data.coordinates),
-      activities: data.activities
-    } as Destination & { activities: Activity[] };
-  },
+    const points_of_interest: PointOfInterest[] = (data.points_of_interest || []).map((poi: any) => ({
+      name: poi.name,
+      coordinates: {
+        lat: parseFloat(poi.latitude),
+        lng: parseFloat(poi.longitude)
+      },
+      type: poi.type
+    }));
 
-  // Get activities for a destination
-  getActivities: async (destinationId: string) => {
-    const { data, error } = await supabase
-      .from('activities')
-      .select('*')
-      .eq('destination_id', destinationId)
-      .eq('status', 'active')
-      .order('price');
+    const attractions: Attraction[] = (data.attractions || []).map((attraction: any) => ({
+      name: attraction.name,
+      type: attraction.type,
+      duration: attraction.duration,
+      price: parseFloat(attraction.price),
+      groupPrice: attraction.group_price ? parseFloat(attraction.group_price) : undefined,
+      minGroupSize: attraction.min_group_size,
+      maxGroupSize: attraction.max_group_size,
+      image: attraction.image,
+      highlights: attraction.highlights ? JSON.parse(attraction.highlights) : [],
+      guide: attraction.guide ? {
+        name: attraction.guide.name,
+        avatar: attraction.guide.avatar,
+        rating: parseFloat(attraction.guide.rating),
+        reviews: attraction.guide.reviews,
+        experience: attraction.guide.experience,
+        languages: attraction.guide.languages ? JSON.parse(attraction.guide.languages) : []
+      } : undefined
+    }));
 
-    if (error) throw error;
-    return data as Activity[];
-  },
-
-  // Get business services
-  getBusinessServices: async () => {
-    const { data, error } = await supabase
-      .from('company_services')
-      .select('*')
-      .order('service_type');
-
-    if (error) throw error;
-    return data as BusinessService[];
-  },
-
-  // Get business services by destination
-  getBusinessServicesByDestination: async (destinationId: string) => {
-    const { data, error } = await supabase
-      .from('company_services')
-      .select('*')
-      .eq('destination_id', destinationId)
-      .order('service_type');
-
-    if (error) throw error;
-    return data as BusinessService[];
-  },
-
-  // Get business services by type
-  getBusinessServicesByType: async (destinationId: string, serviceType: string) => {
-    const { data, error } = await supabase
-      .from('company_services')
-      .select('*')
-      .eq('destination_id', destinationId)
-      .eq('service_type', serviceType)
-      .order('service_name');
-
-    if (error) throw error;
-    return data as BusinessService[];
-  },
-
-  // Get congress tickets
-  getCongressTickets: async () => {
-    const { data, error } = await supabase
-      .from('congress_tickets')
-      .select('*')
-      .order('start_date');
-
-    if (error) throw error;
-    return data as CongressTicket[];
-  },
-
-  // Get congress tickets by destination
-  getCongressTicketsByDestination: async (destinationId: string) => {
-    const { data, error } = await supabase
-      .from('congress_tickets')
-      .select('*')
-      .eq('destination_id', destinationId)
-      .order('start_date');
-
-    if (error) throw error;
-    return data as CongressTicket[];
-  },
-
-  // Create a booking
-  createBooking: async (booking: {
-    user_id: string;
-    activity_id: string;
-    booking_date: string;
-    start_time: string;
-    participants: number;
-    total_price: number;
-    special_requests?: string;
-  }) => {
-    const { data, error } = await supabase
-      .from('bookings')
-      .insert(booking)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
+    return { destination, points_of_interest, attractions };
   }
 };

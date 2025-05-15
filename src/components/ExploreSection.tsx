@@ -69,8 +69,6 @@ const ExploreSection: React.FC<ExploreProps> = () => {
   const [activeSection, setActiveSection] = useState<'short-trips' | 'destinations' | 'local' | 'balkan-trips' | 'montenegro-tours' | 'petra-tours'>('destinations');
   const [selectedTripType, setSelectedTripType] = useState<string | null>(null);
   const [destinations, setDestinations] = useState<any[]>([]);
-  const [businessServices, setBusinessServices] = useState<any[]>([]);
-  const [congressTickets, setCongressTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<boolean>(false);
@@ -78,54 +76,37 @@ const ExploreSection: React.FC<ExploreProps> = () => {
   const t = TRANSLATIONS[settings.language as keyof typeof TRANSLATIONS] || TRANSLATIONS.en;
 
   useEffect(() => {
-    const initializeData = async () => {
+    const fetchDestinations = async () => {
       try {
         setLoading(true);
         setError(null);
-        setConnectionError(false);
-
+        
         const isConnected = await checkConnection();
         if (!isConnected) {
           setConnectionError(true);
           return;
         }
 
-        const [destinationsData, servicesData, ticketsData] = await Promise.all([
-          destinationApi.getDestinations(),
-          destinationApi.getBusinessServices(),
-          destinationApi.getCongressTickets()
-        ]);
-
-        setDestinations(destinationsData);
-        setBusinessServices(servicesData);
-        setCongressTickets(ticketsData);
+        const data = await destinationApi.getDestinations();
+        setDestinations(data);
       } catch (err) {
-        console.error('Error loading data:', err);
-        setError('Failed to load destinations');
+        console.error('Failed to fetch destinations:', err);
+        setError('Failed to load destinations.');
       } finally {
         setLoading(false);
       }
     };
 
-    initializeData();
+    fetchDestinations();
   }, []);
 
-  const filteredDestinations = destinations.filter(destination => {
-    const matchesSearch = (
-      destination.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      destination.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      destination.activities?.some(activity => 
-        activity.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        activity.description.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    );
-
-    const hasServicesInPriceRange = destination.activities?.some(
-      activity => activity.price <= maxPrice
-    );
-
-    return matchesSearch && hasServicesInPriceRange;
-  });
+const filteredDestinations = destinations.filter(destination =>
+  destination.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  destination.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  (destination.highlights || []).some((highlight: string) => 
+    highlight.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+);
 
   if (connectionError) {
     return (
@@ -183,20 +164,10 @@ const ExploreSection: React.FC<ExploreProps> = () => {
           country={destination.country}
           city={destination.city}
           description={destination.description}
-          coordinates={destination.coordinates}
-          image={destination.image_url}
-          pointsOfInterest={destination.pointsOfInterest || []}
-          attractions={destination.activities?.map(activity => ({
-            name: activity.title,
-            type: activity.type,
-            price: activity.price,
-            groupPrice: activity.group_price,
-            duration: activity.duration,
-            image: activity.image_url,
-            minGroupSize: activity.min_group_size,
-            maxGroupSize: activity.max_group_size,
-            guide: activity.guide
-          })) || []}
+          coordinates={{ lat: 0, lng: 0 }} // Default coordinates
+          image={destination.image}
+          pointsOfInterest={destination.points_of_interest || []}
+          attractions={destination.attractions || []}
           visitType={visitType}
           maxPrice={maxPrice}
         />
@@ -359,11 +330,14 @@ const ExploreSection: React.FC<ExploreProps> = () => {
               key={destination.id}
               country={destination.country}
               city={destination.city}
-              image={destination.image_url}
-              services={destination.activities || []}
+              image={destination.image}
+              services={[]}
               onViewDetails={() => setSelectedDestination(destination.id)}
               visitType={visitType}
-              metadata={destination.metadata}
+              metadata={{
+                highlights: destination.highlights,
+                cuisine: destination.cuisine
+              }}
             />
           ))}
         </div>
