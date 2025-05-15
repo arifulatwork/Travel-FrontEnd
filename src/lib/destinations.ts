@@ -137,30 +137,31 @@ export const destinationApi = {
     }));
 
     const attractions: Attraction[] = (data.attractions || []).map((attraction: any) => ({
-      id: attraction.id,
-      name: attraction.name,
-      type: attraction.type,
-      duration: attraction.duration,
-      price: parseFloat(attraction.price),
-      groupPrice: attraction.group_price ? parseFloat(attraction.group_price) : undefined,
-      minGroupSize: attraction.min_group_size,
-      maxGroupSize: attraction.max_group_size,
-      image: attraction.image,
-      highlights: attraction.highlights ? JSON.parse(attraction.highlights) : [],
-      guide: attraction.guide ? {
-        id: attraction.guide.id,
-        name: attraction.guide.name,
-        avatar: attraction.guide.avatar,
-        rating: parseFloat(attraction.guide.rating),
-        reviews: attraction.guide.reviews,
-        experience: attraction.guide.experience,
-        languages: attraction.guide.languages ? JSON.parse(attraction.guide.languages) : [],
-        created_at: attraction.guide.created_at,
-        updated_at: attraction.guide.updated_at
-      } : undefined,
-      created_at: attraction.created_at,
-      updated_at: attraction.updated_at
-    }));
+  id: attraction.id,
+  name: attraction.name,
+  type: attraction.type,
+  duration: attraction.duration,
+  price: parseFloat(attraction.price),
+  groupPrice: attraction.group_price ? parseFloat(attraction.group_price) : undefined,
+  minGroupSize: attraction.min_group_size,
+  maxGroupSize: attraction.max_group_size,
+  image: attraction.image,
+  highlights: attraction.highlights ? JSON.parse(attraction.highlights) : [],  // <-- Fix here
+  guide: attraction.guide ? {
+    id: attraction.guide.id,
+    name: attraction.guide.name,
+    avatar: attraction.guide.avatar,
+    rating: parseFloat(attraction.guide.rating),
+    reviews: attraction.guide.reviews,
+    experience: attraction.guide.experience,
+    languages: attraction.guide.languages ? JSON.parse(attraction.guide.languages) : [], // <-- And here
+    created_at: attraction.guide.created_at,
+    updated_at: attraction.guide.updated_at
+  } : undefined,
+  created_at: attraction.created_at,
+  updated_at: attraction.updated_at
+}));
+
 
     return { destination, points_of_interest, attractions };
   }

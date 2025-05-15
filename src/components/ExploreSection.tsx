@@ -59,11 +59,18 @@ interface ExploreProps {
   searchQuery?: string;
 }
 
+interface DestinationDetailsData {
+  destination: any;
+  points_of_interest: any[];
+  attractions: any[];
+}
+
 const ExploreSection: React.FC<ExploreProps> = () => {
   const { settings } = useSettings();
   const [maxPrice, setMaxPrice] = useState<number>(300);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDestination, setSelectedDestination] = useState<string | null>(null);
+  const [selectedDestinationDetails, setSelectedDestinationDetails] = useState<DestinationDetailsData | null>(null);
   const [visitType, setVisitType] = useState<'individual' | 'group' | 'company'>('individual');
   const [businessCategory, setBusinessCategory] = useState<'events' | 'team_building' | 'congress' | null>(null);
   const [activeSection, setActiveSection] = useState<'short-trips' | 'destinations' | 'local' | 'balkan-trips' | 'montenegro-tours' | 'petra-tours'>('destinations');
@@ -72,6 +79,7 @@ const ExploreSection: React.FC<ExploreProps> = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<boolean>(false);
+  const [detailsLoading, setDetailsLoading] = useState(false);
 
   const t = TRANSLATIONS[settings.language as keyof typeof TRANSLATIONS] || TRANSLATIONS.en;
 
@@ -100,13 +108,27 @@ const ExploreSection: React.FC<ExploreProps> = () => {
     fetchDestinations();
   }, []);
 
-const filteredDestinations = destinations.filter(destination =>
-  destination.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
-  destination.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-  (destination.highlights || []).some((highlight: string) => 
-    highlight.toLowerCase().includes(searchQuery.toLowerCase())
-  )
-);
+  const handleViewDetails = async (id: string) => {
+    try {
+      setDetailsLoading(true);
+      const fullData = await destinationApi.getDestination(id);
+      setSelectedDestination(id);
+      setSelectedDestinationDetails(fullData);
+    } catch (err) {
+      console.error('Failed to fetch destination details:', err);
+      setError('Failed to load destination details.');
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  const filteredDestinations = destinations.filter(destination =>
+    destination.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    destination.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (destination.highlights || []).some((highlight: string) => 
+      highlight.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  );
 
   if (connectionError) {
     return (
@@ -147,14 +169,27 @@ const filteredDestinations = destinations.filter(destination =>
     );
   }
 
-  if (selectedDestination) {
-    const destination = destinations.find(d => d.id === selectedDestination);
-    if (!destination) return null;
+  if (detailsLoading) {
+    return (
+      <div className="max-w-7xl mx-auto p-4">
+        <div className="animate-pulse space-y-8">
+          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="bg-gray-200 h-96 rounded-xl"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (selectedDestinationDetails) {
+    const { destination, points_of_interest, attractions } = selectedDestinationDetails;
 
     return (
       <div className="p-4">
         <button
-          onClick={() => setSelectedDestination(null)}
+          onClick={() => {
+            setSelectedDestination(null);
+            setSelectedDestinationDetails(null);
+          }}
           className="mb-6 text-purple-600 hover:text-purple-700 font-medium flex items-center gap-2"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -164,10 +199,10 @@ const filteredDestinations = destinations.filter(destination =>
           country={destination.country}
           city={destination.city}
           description={destination.description}
-          coordinates={destination.coordinates} // Default coordinates
+          coordinates={destination.coordinates}
           image={destination.image}
-          pointsOfInterest={destination.points_of_interest || []}
-          attractions={destination.attractions || []}
+          pointsOfInterest={points_of_interest}
+          attractions={attractions}
           visitType={visitType}
           maxPrice={maxPrice}
         />
@@ -332,7 +367,7 @@ const filteredDestinations = destinations.filter(destination =>
               city={destination.city}
               image={destination.image}
               services={[]}
-              onViewDetails={() => setSelectedDestination(destination.id)}
+              onViewDetails={() => handleViewDetails(destination.id)}
               visitType={visitType}
               metadata={{
                 highlights: destination.highlights,
