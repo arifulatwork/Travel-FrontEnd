@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Calendar, Clock, MapPin, Users, CreditCard, Info, Sun, Moon, Coffee, Music, Utensils, Palette, Search, X, Check, Star } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Calendar, Clock, MapPin, Users, Check, Star } from 'lucide-react';
 import LocationMap from './maps/LocationMap';
 
 interface Coordinates {
@@ -36,33 +36,71 @@ interface Attraction {
 }
 
 interface DestinationDetailsProps {
-  country: string;
-  city: string;
-  description?: string;
-  coordinates: Coordinates;
-  image: string;
-  pointsOfInterest: PointOfInterest[];
-  attractions: Attraction[];
-  visitType: 'individual' | 'group';
-  maxPrice?: number;
+  id: number; // Only ID passed now
 }
 
-const DestinationDetails: React.FC<DestinationDetailsProps> = ({
-  country,
-  city,
-  description,
-  coordinates,
-  image,
-  pointsOfInterest,
-  attractions,
-  visitType,
-  maxPrice = Infinity
-}) => {
+const DestinationDetails: React.FC<DestinationDetailsProps> = ({ id }) => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [destination, setDestination] = useState<any>(null);
   const [groupSize, setGroupSize] = useState<number>(0);
   const [showGroupSizeError, setShowGroupSizeError] = useState(false);
 
-  const minGroupSize = Math.min(...attractions.map(a => a.minGroupSize || 0));
-  const maxGroupSize = Math.max(...attractions.map(a => a.maxGroupSize || 0));
+  useEffect(() => {
+    fetch(`http://127.0.0.1:8000/api/destinations/${id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        // Parse JSON fields
+        data.highlights = JSON.parse(data.highlights);
+        data.cuisine = JSON.parse(data.cuisine);
+        data.points_of_interest = data.points_of_interest.map((poi: any) => ({
+          name: poi.name,
+          coordinates: { lat: parseFloat(poi.latitude), lng: parseFloat(poi.longitude) },
+          type: poi.type,
+        }));
+        data.attractions = data.attractions.map((a: any) => ({
+          name: a.name,
+          type: a.type,
+          duration: a.duration,
+          price: parseFloat(a.price),
+          groupPrice: a.group_price ? parseFloat(a.group_price) : undefined,
+          minGroupSize: a.min_group_size,
+          maxGroupSize: a.max_group_size,
+          image: a.image,
+          highlights: a.highlights ? JSON.parse(a.highlights) : undefined,
+          guide: a.guide
+            ? {
+                name: a.guide.name,
+                avatar: a.guide.avatar,
+                rating: parseFloat(a.guide.rating),
+                reviews: a.guide.reviews,
+                experience: a.guide.experience,
+                languages: JSON.parse(a.guide.languages),
+              }
+            : undefined,
+        }));
+        setDestination(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Failed to load destination', err);
+        setError(true);
+        setLoading(false);
+      });
+  }, [id]);
+
+  if (loading) {
+    return <div className="p-6 text-center">Loading destination details...</div>;
+  }
+
+  if (error || !destination) {
+    return <div className="p-6 text-center text-red-600">Failed to load destination.</div>;
+  }
+
+  const { country, city, coordinates, description, points_of_interest, attractions } = destination;
+
+  const minGroupSize = Math.min(...attractions.map((a: any) => a.minGroupSize || 0));
+  const maxGroupSize = Math.max(...attractions.map((a: any) => a.maxGroupSize || 0));
 
   const handleGroupSizeChange = (size: number) => {
     if (size >= minGroupSize && size <= maxGroupSize) {
@@ -119,12 +157,9 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
     ];
   };
 
-  const filteredAttractions = attractions.filter(attraction => 
-    (visitType === 'group' && attraction.groupPrice ? attraction.groupPrice : attraction.price) <= maxPrice
-  );
-
   return (
     <div className="space-y-8">
+      {/* Destination Info */}
       <div className="bg-white rounded-xl p-6 shadow-sm">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -139,7 +174,7 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg">
               <Users className="h-5 w-5" />
-              <span className="font-medium capitalize">{visitType} Visit</span>
+              <span className="font-medium capitalize">Visit</span>
             </div>
           </div>
         </div>
@@ -148,51 +183,23 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
           <p className="text-gray-600 mb-6">{description}</p>
         )}
 
-        {visitType === 'group' && (
-          <div className="mb-6 bg-gray-50 rounded-lg overflow-hidden">
-            <div className="p-4 border-b">
-              <h3 className="font-semibold mb-3 flex items-center gap-2">
-                <Users className="h-5 w-5 text-purple-600" />
-                Group Size & Pricing Calculator
-              </h3>
-              <div className="flex items-center gap-4">
-                <input
-                  type="number"
-                  min={minGroupSize}
-                  max={maxGroupSize}
-                  value={groupSize || ''}
-                  onChange={(e) => handleGroupSizeChange(Number(e.target.value))}
-                  className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  placeholder="Enter size"
-                />
-                <span className="text-sm text-gray-600">
-                  {minGroupSize}-{maxGroupSize} people
-                </span>
-              </div>
-              {showGroupSizeError && (
-                <p className="text-red-500 text-sm mt-2">
-                  Please enter a group size between {minGroupSize} and {maxGroupSize} people
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
+        {/* Location Map */}
         <LocationMap 
           center={coordinates} 
           zoom={13} 
-          pointsOfInterest={pointsOfInterest}
+          pointsOfInterest={points_of_interest}
         />
       </div>
 
-      {filteredAttractions.length > 0 ? (
+      {/* Attractions */}
+      {attractions.length > 0 && (
         <div className="bg-white rounded-xl p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-6">
             <Calendar className="h-6 w-6 text-purple-600" />
             <h2 className="text-xl font-semibold">Attractions & Activities</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredAttractions.map((attraction, index) => (
+            {attractions.map((attraction: Attraction, index: number) => (
               <div key={index} className="bg-gray-50 rounded-lg p-4">
                 <img
                   src={attraction.image}
@@ -205,12 +212,8 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
                   <Clock className="h-4 w-4 mr-1" />
                   <span>{attraction.duration}</span>
                 </div>
-                {visitType === 'group' && attraction.minGroupSize && attraction.maxGroupSize && (
-                  <div className="flex items-center text-gray-500 mt-1">
-                    <Users className="h-4 w-4 mr-1" />
-                    <span>{attraction.minGroupSize}-{attraction.maxGroupSize} people</span>
-                  </div>
-                )}
+
+                {/* Guide Info */}
                 {attraction.guide && (
                   <div className="mt-2 p-2 bg-purple-50 rounded-lg">
                     <div className="flex items-center space-x-2">
@@ -223,7 +226,7 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
                       ) : (
                         <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
                           <span className="text-purple-600 font-medium">
-                            {attraction.guide.name.charAt(0)}
+                            {attraction.guide.name?.charAt(0)}
                           </span>
                         </div>
                       )}
@@ -242,7 +245,7 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
                   </div>
                 )}
 
-                {/* Key Highlights Section */}
+                {/* Highlights */}
                 <div className="mt-4 p-3 bg-purple-50 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <Star className="h-4 w-4 text-purple-600" />
@@ -258,31 +261,19 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
                   </ul>
                 </div>
 
+                {/* Booking */}
                 <div className="flex items-center justify-between mt-4">
                   <span className="text-purple-600 font-semibold">
                     €{attraction.price}
-                    {visitType === 'group' && attraction.groupPrice && groupSize >= minGroupSize && (
-                      <span className="text-sm text-gray-500"> (€{attraction.groupPrice} pp)</span>
-                    )}
                   </span>
-                  <button 
-                    className={`px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 ${
-                      visitType === 'group' && (!groupSize || groupSize < minGroupSize || groupSize > maxGroupSize)
-                        ? 'opacity-50 cursor-not-allowed'
-                        : ''
-                    }`}
-                    disabled={visitType === 'group' && (!groupSize || groupSize < minGroupSize || groupSize > maxGroupSize)}
-                  >
+                  <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
                     Book Now
                   </button>
                 </div>
+
               </div>
             ))}
           </div>
-        </div>
-      ) : (
-        <div className="bg-yellow-50 p-6 rounded-xl text-center">
-          <p className="text-yellow-700">No activities found within the selected price range.</p>
         </div>
       )}
     </div>
