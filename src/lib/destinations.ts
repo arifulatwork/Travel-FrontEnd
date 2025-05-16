@@ -83,10 +83,16 @@ export const destinationApi = {
       country: destination.country,
       city: destination.city,
       image: destination.image,
-      coordinates: destination.coordinates ? JSON.parse(destination.coordinates) : { lat: 0, lng: 0 },
+      coordinates: typeof destination.coordinates === 'string'
+        ? JSON.parse(destination.coordinates)
+        : destination.coordinates || { lat: 0, lng: 0 },
       visit_type: destination.visit_type,
-      highlights: destination.highlights ? JSON.parse(destination.highlights) : [],
-      cuisine: destination.cuisine ? JSON.parse(destination.cuisine) : [],
+      highlights: typeof destination.highlights === 'string'
+        ? JSON.parse(destination.highlights)
+        : destination.highlights || [],
+      cuisine: typeof destination.cuisine === 'string'
+        ? JSON.parse(destination.cuisine)
+        : destination.cuisine || [],
       max_price: parseFloat(destination.max_price) || 0,
       description: destination.description,
       created_at: destination.created_at,
@@ -109,10 +115,16 @@ export const destinationApi = {
       country: data.country,
       city: data.city,
       image: data.image,
-      coordinates: data.coordinates ? JSON.parse(data.coordinates) : { lat: 0, lng: 0 },
+      coordinates: typeof data.coordinates === 'string'
+        ? JSON.parse(data.coordinates)
+        : data.coordinates || { lat: 0, lng: 0 },
       visit_type: data.visit_type,
-      highlights: data.highlights ? JSON.parse(data.highlights) : [],
-      cuisine: data.cuisine ? JSON.parse(data.cuisine) : [],
+      highlights: typeof data.highlights === 'string'
+        ? JSON.parse(data.highlights)
+        : data.highlights || [],
+      cuisine: typeof data.cuisine === 'string'
+        ? JSON.parse(data.cuisine)
+        : data.cuisine || [],
       max_price: parseFloat(data.max_price) || 0,
       description: data.description,
       created_at: data.created_at,
@@ -123,45 +135,54 @@ export const destinationApi = {
       id: poi.id,
       name: poi.name,
       type: poi.type,
-      position: poi.position ? JSON.parse(poi.position) : { lat: 0, lng: 0 },
+      position: typeof poi.position === 'string'
+        ? JSON.parse(poi.position)
+        : poi.position || { lat: 0, lng: 0 },
       description: poi.description,
       image: poi.image,
       rating: poi.rating ? parseFloat(poi.rating) : undefined,
       price: poi.price,
       booking_url: poi.booking_url,
-      amenities: poi.amenities ? JSON.parse(poi.amenities) : undefined,
-      flight_details: poi.flight_details ? JSON.parse(poi.flight_details) : undefined,
+      amenities: typeof poi.amenities === 'string'
+        ? JSON.parse(poi.amenities)
+        : poi.amenities,
+      flight_details: typeof poi.flight_details === 'string'
+        ? JSON.parse(poi.flight_details)
+        : poi.flight_details,
       shuttle_details: poi.shuttle_details,
       created_at: poi.created_at,
       updated_at: poi.updated_at
     }));
 
     const attractions: Attraction[] = (data.attractions || []).map((attraction: any) => ({
-  id: attraction.id,
-  name: attraction.name,
-  type: attraction.type,
-  duration: attraction.duration,
-  price: parseFloat(attraction.price),
-  groupPrice: attraction.group_price ? parseFloat(attraction.group_price) : undefined,
-  minGroupSize: attraction.min_group_size,
-  maxGroupSize: attraction.max_group_size,
-  image: attraction.image,
-  highlights: attraction.highlights ? JSON.parse(attraction.highlights) : [],  // <-- Fix here
-  guide: attraction.guide ? {
-    id: attraction.guide.id,
-    name: attraction.guide.name,
-    avatar: attraction.guide.avatar,
-    rating: parseFloat(attraction.guide.rating),
-    reviews: attraction.guide.reviews,
-    experience: attraction.guide.experience,
-    languages: attraction.guide.languages ? JSON.parse(attraction.guide.languages) : [], // <-- And here
-    created_at: attraction.guide.created_at,
-    updated_at: attraction.guide.updated_at
-  } : undefined,
-  created_at: attraction.created_at,
-  updated_at: attraction.updated_at
-}));
-
+      id: attraction.id,
+      name: attraction.name,
+      type: attraction.type,
+      duration: attraction.duration,
+      price: parseFloat(attraction.price),
+      groupPrice: attraction.group_price ? parseFloat(attraction.group_price) : undefined,
+      minGroupSize: attraction.min_group_size,
+      maxGroupSize: attraction.max_group_size,
+      image: attraction.image,
+      highlights: typeof attraction.highlights === 'string'
+        ? JSON.parse(attraction.highlights)
+        : attraction.highlights || [],
+      guide: attraction.guide ? {
+        id: attraction.guide.id,
+        name: attraction.guide.name,
+        avatar: attraction.guide.avatar,
+        rating: parseFloat(attraction.guide.rating),
+        reviews: attraction.guide.reviews,
+        experience: attraction.guide.experience,
+        languages: typeof attraction.guide.languages === 'string'
+          ? JSON.parse(attraction.guide.languages)
+          : attraction.guide.languages || [],
+        created_at: attraction.guide.created_at,
+        updated_at: attraction.guide.updated_at
+      } : undefined,
+      created_at: attraction.created_at,
+      updated_at: attraction.updated_at
+    }));
 
     return { destination, points_of_interest, attractions };
   }
