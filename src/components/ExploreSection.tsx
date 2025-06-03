@@ -9,7 +9,6 @@ import MontenegroTripsSection from './trips/MontenegroTripsSection';
 import PetraTripsSection from './trips/PetraTripsSection';
 import ShortTripsSection from './trips/ShortTripsSection';
 import { destinationApi } from '../lib/destinations';
-import { checkConnection } from '../lib/supabase';
 
 const TRANSLATIONS = {
   en: {
@@ -78,7 +77,6 @@ const ExploreSection: React.FC<ExploreProps> = () => {
   const [destinations, setDestinations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [connectionError, setConnectionError] = useState<boolean>(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
 
   const t = TRANSLATIONS[settings.language as keyof typeof TRANSLATIONS] || TRANSLATIONS.en;
@@ -89,12 +87,6 @@ const ExploreSection: React.FC<ExploreProps> = () => {
         setLoading(true);
         setError(null);
         
-        const isConnected = await checkConnection();
-        if (!isConnected) {
-          setConnectionError(true);
-          return;
-        }
-
         const data = await destinationApi.getDestinations();
         setDestinations(data);
       } catch (err) {
@@ -129,20 +121,6 @@ const ExploreSection: React.FC<ExploreProps> = () => {
       highlight.toLowerCase().includes(searchQuery.toLowerCase())
     )
   );
-
-  if (connectionError) {
-    return (
-      <div className="max-w-7xl mx-auto p-8">
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
-          <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-yellow-800 mb-2">Database Connection Required</h3>
-          <p className="text-yellow-700 mb-4">
-            Please click the "Connect to Supabase" button in the top right corner to set up your database connection.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   if (loading) {
     return (
