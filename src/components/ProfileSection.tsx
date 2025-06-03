@@ -339,6 +339,18 @@ const ProfileSection: React.FC = () => {
     setShowPersonaQuiz(false);
   };
 
+  const handleLogout = () => {
+    // Clear user data from localStorage
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    
+    // For a real app, you might want to redirect to login page instead
+    window.location.reload();
+    
+    // If using React Router:
+    // navigate('/login');
+  };
+
   return (
     <div className="max-w-4xl mx-auto">
       {/* Profile Header */}
@@ -496,49 +508,60 @@ const ProfileSection: React.FC = () => {
 
       {/* Settings Cards */}
       <div className="space-y-4">
-        <div className="bg-white rounded-xl p-4 shadow-sm space-y-4">
-          <div 
-            className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
-            onClick={() => setActiveSection('account')}
-          >
-            <div className="flex items-center space-x-3">
-              <Settings className="text-gray-600" />
-              <span>Account Settings</span>
-            </div>
-            <ChevronRight className="text-gray-400" />
-          </div>
-          <div 
-            className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
-            onClick={() => setActiveSection('notifications')}
-          >
-            <div className="flex items-center space-x-3">
-              <Bell className="text-gray-600" />
-              <span>Notifications</span>
-            </div>
-            <ChevronRight className="text-gray-400" />
-          </div>
-          <div 
-            className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
-            onClick={() => setActiveSection('privacy')}
-          >
-            <div className="flex items-center space-x-3">
-              <Shield className="text-gray-600" />
-              <span>Privacy & Security</span>
-            </div>
-            <ChevronRight className="text-gray-400" />
-          </div>
-          <div 
-            className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
-            onClick={() => setActiveSection('help')}
-          >
-            <div className="flex items-center space-x-3">
-              <HelpCircle className="text-gray-600" />
-              <span>Help & Support</span>
-            </div>
-            <ChevronRight className="text-gray-400" />
-          </div>
-        </div>
+  <div className="bg-white rounded-xl p-4 shadow-sm space-y-4">
+    <div 
+      className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
+      onClick={() => setActiveSection('account')}
+    >
+      <div className="flex items-center space-x-3">
+        <Settings className="text-gray-600" />
+        <span>Account Settings</span>
       </div>
+      <ChevronRight className="text-gray-400" />
+    </div>
+    <div 
+      className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
+      onClick={() => setActiveSection('notifications')}
+    >
+      <div className="flex items-center space-x-3">
+        <Bell className="text-gray-600" />
+        <span>Notifications</span>
+      </div>
+      <ChevronRight className="text-gray-400" />
+    </div>
+    <div 
+      className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
+      onClick={() => setActiveSection('privacy')}
+    >
+      <div className="flex items-center space-x-3">
+        <Shield className="text-gray-600" />
+        <span>Privacy & Security</span>
+      </div>
+      <ChevronRight className="text-gray-400" />
+    </div>
+    <div 
+      className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
+      onClick={() => setActiveSection('help')}
+    >
+      <div className="flex items-center space-x-3">
+        <HelpCircle className="text-gray-600" />
+        <span>Help & Support</span>
+      </div>
+      <ChevronRight className="text-gray-400" />
+    </div>
+    {/* Logout Option - Now matches other items */}
+    <div 
+      className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
+      onClick={handleLogout}
+    >
+      <div className="flex items-center space-x-3">
+        <X className="text-gray-600" />
+        <span>Logout</span>
+      </div>
+      <ChevronRight className="text-gray-400" />
+    </div>
+  </div>
+</div>
 
       {/* Add Card Modal */}
       {showAddCard && (
