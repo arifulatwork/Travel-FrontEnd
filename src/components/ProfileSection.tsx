@@ -1,10 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { CreditCard, ChevronRight, Settings, Bell, Shield, HelpCircle, MapPin, Calendar, Star, Edit, Plus, Mail, Phone, Globe, X, ArrowLeft, Smartphone, Laptop, Tablet, Lock, KeyRound, QrCode, User, AtSign, Languages, HelpCircleIcon, MessageCircle, Book, FileQuestion, Compass } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { profileApi, type Profile, type ProfileSettings } from '../lib/profile';
-import TravelPersonaQuiz from './profile/TravelPersonaQuiz';
-import TravelPersonaResults from './profile/TravelPersonaResults';
-import { supabase } from '../lib/supabase';
+import React, { useState } from 'react';
+import { CreditCard, ChevronRight, Settings, Bell, Shield, HelpCircle, MapPin, Edit, Plus, X, Compass, Check, Users, Activity, DollarSign, Calendar } from 'lucide-react';
 
 interface CreditCardType {
   id: string;
@@ -20,12 +15,266 @@ interface CardFormData {
   cvc: string;
 }
 
+interface Profile {
+  id: string;
+  full_name: string;
+  email: string;
+  avatar_url?: string;
+  location?: string;
+  preferences?: {
+    travelPersona?: Record<string, string | string[] | number>;
+  };
+}
+
+interface Question {
+  id: string;
+  text: string;
+  options: {
+    value: string;
+    label: string;
+    icon?: React.ElementType;
+    description?: string;
+    emoji?: string;
+  }[];
+  multiple?: boolean;
+  hasBudgetSlider?: boolean;
+}
+
+const questions: Question[] = [
+  {
+    id: 'travelReason',
+    text: 'Why do you travel?',
+    options: [
+      { value: 'peace', label: 'Peace', description: 'I want to disconnect and recharge', emoji: '🧘‍♀️' },
+      { value: 'exploration', label: 'Exploration', description: 'I\'m curious and want to see new things', emoji: '🔍' },
+      { value: 'connection', label: 'Connection', description: 'I want to meet people and bond', emoji: '🧑‍🤝‍🧑', icon: Users },
+      { value: 'escape', label: 'Escape', description: 'I need a break from my routine', emoji: '✈️', icon: Compass },
+      { value: 'adventure', label: 'Adventure', description: 'I live for thrills and challenges', emoji: '🗺️', icon: Activity }
+    ]
+  },
+  {
+    id: 'environment',
+    text: 'What kind of environment do you vibe with?',
+    options: [
+      { value: 'quiet', label: 'Quiet & Secluded', description: 'Far from the crowds', emoji: '🌿' },
+      { value: 'mixed', label: 'Half & Half', description: 'I like peaceful moments and energy', emoji: '🏙️' },
+      { value: 'bustling', label: 'Bustling & Lively', description: 'I love busy streets and action', emoji: '🎡' }
+    ]
+  },
+  {
+    id: 'budgetPreference',
+    text: 'Do you want us to filter trips by your budget?',
+    hasBudgetSlider: true,
+    options: [
+      { value: 'yes', label: 'Yes, show me trips within my budget', emoji: '✅', icon: Check },
+      { value: 'no', label: 'No, show me everything', emoji: '⛔', icon: DollarSign }
+    ]
+  },
+  {
+    id: 'planningStyle',
+    text: 'How do you like to plan your trips?',
+    options: [
+      { value: 'planned', label: 'Fully Planned', description: 'Detailed itineraries', emoji: '📋', icon: Calendar },
+      { value: 'flexible', label: 'Flexible', description: 'Rough plan with room for changes', emoji: '🧭', icon: Compass },
+      { value: 'spontaneous', label: 'Spontaneous', description: 'Go with the flow', emoji: '🌊', icon: Activity }
+    ]
+  }
+];
+
+const TravelPersonaQuiz: React.FC<{
+  onComplete: (results: Record<string, string | string[] | number>) => void;
+  initialAnswers?: Record<string, string | string[] | number>;
+}> = ({ onComplete, initialAnswers = {} }) => {
+  const [answers, setAnswers] = useState<Record<string, string | string[] | number>>(initialAnswers);
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [budgetValue, setBudgetValue] = useState(500);
+
+  const handleAnswer = (questionId: string, value: string) => {
+    const question = questions[currentQuestion];
+    let newAnswers;
+
+    if (question.multiple) {
+      const currentAnswers = (answers[questionId] as string[]) || [];
+      if (currentAnswers.includes(value)) {
+        newAnswers = {
+          ...answers,
+          [questionId]: currentAnswers.filter(v => v !== value)
+        };
+      } else {
+        newAnswers = {
+          ...answers,
+          [questionId]: [...currentAnswers, value]
+        };
+      }
+    } else {
+      newAnswers = {
+        ...answers,
+        [questionId]: value
+      };
+
+      if (questionId === 'budgetPreference' && value === 'yes') {
+        newAnswers.budgetAmount = budgetValue;
+      }
+
+      if (currentQuestion < questions.length - 1) {
+        setCurrentQuestion(currentQuestion + 1);
+      }
+    }
+
+    setAnswers(newAnswers);
+
+    if (currentQuestion === questions.length - 1 || 
+       (question.multiple && Object.keys(newAnswers).length === questions.length)) {
+      onComplete(newAnswers);
+    }
+  };
+
+  const handleBudgetChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setBudgetValue(parseInt(event.target.value));
+  };
+
+  const question = questions[currentQuestion];
+  const isAnswered = answers[question.id];
+  const isMultiple = question.multiple;
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm p-6 space-y-6">
+      <div className="space-y-4">
+        <h3 className="text-xl font-semibold text-gray-900">{question.text}</h3>
+        <div className="grid grid-cols-1 gap-4">
+          {question.options.map((option) => {
+            const isSelected = isMultiple 
+              ? (answers[question.id] as string[] || []).includes(option.value)
+              : answers[question.id] === option.value;
+
+            return (
+              <button
+                key={option.value}
+                onClick={() => handleAnswer(question.id, option.value)}
+                className={`flex items-center p-4 rounded-lg border-2 transition-colors ${
+                  isSelected
+                    ? 'border-purple-600 bg-purple-50'
+                    : 'border-gray-200 hover:border-purple-200'
+                }`}
+              >
+                <div className="flex-1 flex items-center gap-3">
+                  {option.icon && (
+                    <option.icon className={`h-5 w-5 ${
+                      isSelected ? 'text-purple-600' : 'text-gray-400'
+                    }`} />
+                  )}
+                  <div className="text-left">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">{option.emoji}</span>
+                      <p className={`font-medium ${
+                        isSelected ? 'text-purple-600' : 'text-gray-900'
+                      }`}>
+                        {option.label}
+                      </p>
+                    </div>
+                    {option.description && (
+                      <p className="text-sm text-gray-500 mt-1">{option.description}</p>
+                    )}
+                  </div>
+                </div>
+                {isSelected && (
+                  <Check className="h-5 w-5 text-purple-600 ml-2" />
+                )}
+              </button>
+            );
+          })}
+
+          {question.hasBudgetSlider && answers[question.id] === 'yes' && (
+            <div className="mt-4 p-4 bg-purple-50 rounded-lg">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select your budget range (€{budgetValue})
+              </label>
+              <input
+                type="range"
+                min="100"
+                max="1000"
+                step="50"
+                value={budgetValue}
+                onChange={handleBudgetChange}
+                className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+              />
+              <div className="flex justify-between text-sm text-gray-500 mt-2">
+                <span>€100</span>
+                <span>€1000</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex justify-between items-center pt-4">
+        <button
+          onClick={() => setCurrentQuestion(Math.max(0, currentQuestion - 1))}
+          className={`text-sm text-purple-600 ${
+            currentQuestion === 0 ? 'invisible' : ''
+          }`}
+        >
+          Previous
+        </button>
+        <div className="flex gap-1">
+          {questions.map((_, index) => (
+            <div
+              key={index}
+              className={`h-1 w-8 rounded-full ${
+                index === currentQuestion
+                  ? 'bg-purple-600'
+                  : index < currentQuestion
+                  ? 'bg-purple-200'
+                  : 'bg-gray-200'
+              }`}
+            />
+          ))}
+        </div>
+        {isMultiple && (
+          <button
+            onClick={() => {
+              if (currentQuestion < questions.length - 1) {
+                setCurrentQuestion(currentQuestion + 1);
+              } else {
+                onComplete(answers);
+              }
+            }}
+            className="text-sm text-purple-600"
+          >
+            {currentQuestion === questions.length - 1 ? 'Finish' : 'Next'}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const ProfileSection: React.FC = () => {
-  const { user } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [cards, setCards] = useState<CreditCardType[]>([]);
+  const [profile, setProfile] = useState<Profile>({
+    id: 'user-123',
+    full_name: 'John Doe',
+    email: 'john.doe@example.com',
+    location: 'New York, USA',
+    preferences: {}
+  });
+
+  const [cards, setCards] = useState<CreditCardType[]>([
+    {
+      id: 'card-1',
+      last4: '4242',
+      expiry: '04/25',
+      type: 'visa',
+      isDefault: true
+    },
+    {
+      id: 'card-2',
+      last4: '5555',
+      expiry: '12/23',
+      type: 'mastercard',
+      isDefault: false
+    }
+  ]);
+
   const [showAddCard, setShowAddCard] = useState(false);
   const [cardFormData, setCardFormData] = useState<CardFormData>({
     number: '',
@@ -35,189 +284,60 @@ const ProfileSection: React.FC = () => {
   const [cardError, setCardError] = useState<string>('');
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [showPersonaQuiz, setShowPersonaQuiz] = useState(false);
-  const [personaAnswers, setPersonaAnswers] = useState<Record<string, string | string[]>>({});
 
-  useEffect(() => {
-    if (user) {
-      loadProfile();
-      loadPaymentMethods();
-    }
-  }, [user]);
-
-  const loadProfile = async () => {
-    try {
-      if (!user) return;
-      
-      // First try to get existing profile
-      const { data: existingProfile, error: fetchError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      // If no profile exists, create one with default values
-      if (fetchError && fetchError.message.includes('no rows')) {
-        const defaultProfile = {
-          id: user.id,
-          username: null,
-          full_name: 'New User',
-          settings: {
-            notifications: {
-              push: true,
-              email: true,
-              marketing: false
-            },
-            appearance: {
-              darkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
-              fontSize: 'medium'
-            },
-            language: 'en',
-            currency: 'EUR'
-          },
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-
-        const { data: newProfile, error: createError } = await supabase
-          .from('profiles')
-          .insert(defaultProfile)
-          .select()
-          .single();
-
-        if (createError) throw createError;
-        setProfile(newProfile);
-      } else if (existingProfile) {
-        setProfile(existingProfile);
-        if (existingProfile.preferences?.travelPersona) {
-          setPersonaAnswers(existingProfile.preferences.travelPersona);
-        }
-      }
-
-      setError(null);
-    } catch (err) {
-      console.error('Error loading profile:', err);
-      setError('Failed to load profile');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadPaymentMethods = async () => {
-    try {
-      if (!user) return;
-      const data = await profileApi.getPaymentMethods(user.id);
-      setCards(data);
-    } catch (err) {
-      console.error('Error loading payment methods:', err);
-    }
-  };
-
-  const handleAddCard = async (e: React.FormEvent) => {
+  const handleAddCard = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
-
-    try {
-      await profileApi.addPaymentMethod(user.id, {
-        last4: cardFormData.number.slice(-4),
-        expiry: cardFormData.expiry,
-        type: cardFormData.number.startsWith('4') ? 'visa' : 'mastercard',
-        is_default: cards.length === 0
-      });
-
-      await loadPaymentMethods();
-      setShowAddCard(false);
-      setCardFormData({ number: '', expiry: '', cvc: '' });
-    } catch (err) {
-      console.error('Error adding card:', err);
-      setCardError('Failed to add card');
+    
+    if (cardFormData.number.length !== 16) {
+      setCardError('Card number must be 16 digits');
+      return;
     }
+
+    if (cardFormData.expiry.length !== 5) {
+      setCardError('Please enter a valid expiry date (MM/YY)');
+      return;
+    }
+
+    if (cardFormData.cvc.length < 3) {
+      setCardError('CVC must be at least 3 digits');
+      return;
+    }
+
+    const newCard: CreditCardType = {
+      id: `card-${Date.now()}`,
+      last4: cardFormData.number.slice(-4),
+      expiry: cardFormData.expiry,
+      type: cardFormData.number.startsWith('4') ? 'visa' : 'mastercard',
+      isDefault: cards.length === 0
+    };
+
+    setCards([...cards, newCard]);
+    setShowAddCard(false);
+    setCardFormData({ number: '', expiry: '', cvc: '' });
+    setCardError('');
   };
 
-  const setDefaultCard = async (cardId: string) => {
-    if (!user) return;
-
-    try {
-      await profileApi.setDefaultPaymentMethod(user.id, cardId);
-      await loadPaymentMethods();
-    } catch (err) {
-      console.error('Error setting default card:', err);
-    }
+  const setDefaultCard = (cardId: string) => {
+    setCards(cards.map(card => ({
+      ...card,
+      isDefault: card.id === cardId
+    })));
   };
 
-  const removeCard = async (cardId: string) => {
-    if (!user) return;
-
-    try {
-      await profileApi.removePaymentMethod(user.id, cardId);
-      await loadPaymentMethods();
-    } catch (err) {
-      console.error('Error removing card:', err);
-    }
+  const removeCard = (cardId: string) => {
+    setCards(cards.filter(card => card.id !== cardId));
   };
 
-  const handlePersonaComplete = async (answers: Record<string, string | string[]>) => {
-    if (!user || !profile) return;
-
-    try {
-      const updatedProfile = {
-        ...profile,
-        preferences: {
-          ...profile.preferences,
-          travelPersona: answers
-        }
-      };
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .update(updatedProfile)
-        .eq('id', user.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setProfile(data);
-      setPersonaAnswers(answers);
-      setShowPersonaQuiz(false);
-    } catch (err) {
-      console.error('Error saving travel persona:', err);
-      setError('Failed to save travel persona');
-    }
+  const handlePersonaComplete = (answers: Record<string, string | string[] | number>) => {
+    setProfile(prev => ({
+      ...prev,
+      preferences: {
+        ...prev.preferences,
+        travelPersona: answers
+      }
+    }));
+    setShowPersonaQuiz(false);
   };
-
-  if (loading) {
-    return (
-      <div className="max-w-4xl mx-auto p-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-32 bg-gray-200 rounded-xl"></div>
-          <div className="space-y-3">
-            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="max-w-4xl mx-auto p-8">
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg">
-          {error}
-        </div>
-      </div>
-    );
-  }
-
-  if (!user || !profile) {
-    return (
-      <div className="max-w-4xl mx-auto p-8">
-        <div className="text-center">
-          <p className="text-gray-600">Please log in to view your profile</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -239,7 +359,7 @@ const ProfileSection: React.FC = () => {
           </div>
           <div>
             <h2 className="text-xl font-bold">{profile.full_name}</h2>
-            <p className="text-gray-600">{user.email}</p>
+            <p className="text-gray-600">{profile.email}</p>
             {profile.location && (
               <div className="flex items-center mt-2 text-sm text-gray-500">
                 <MapPin className="h-4 w-4 mr-1" />
@@ -262,17 +382,47 @@ const ProfileSection: React.FC = () => {
             className="text-sm text-purple-600 hover:text-purple-700 flex items-center gap-1"
           >
             <Edit className="h-4 w-4" />
-            {Object.keys(personaAnswers).length > 0 ? 'Update' : 'Take Quiz'}
+            {profile.preferences?.travelPersona ? 'Update' : 'Take Quiz'}
           </button>
         </div>
 
         {showPersonaQuiz ? (
           <TravelPersonaQuiz
             onComplete={handlePersonaComplete}
-            initialAnswers={personaAnswers}
+            initialAnswers={profile.preferences?.travelPersona || {}}
           />
-        ) : Object.keys(personaAnswers).length > 0 ? (
-          <TravelPersonaResults answers={personaAnswers} />
+        ) : profile.preferences?.travelPersona ? (
+          <div className="space-y-4">
+            <h4 className="font-medium">Your Travel Style:</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {Object.entries(profile.preferences.travelPersona).map(([key, value]) => {
+                if (key === 'budgetAmount') return null;
+                
+                const question = questions.find(q => q.id === key);
+                if (!question) return null;
+                
+                const selectedOption = question.options.find(opt => 
+                  Array.isArray(value) 
+                    ? value.includes(opt.value) 
+                    : opt.value === value
+                );
+
+                return (
+                  <div key={key} className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-sm text-gray-500">{question.text}</p>
+                    <p className="font-medium mt-1">
+                      {selectedOption?.emoji} {selectedOption?.label}
+                    </p>
+                    {key === 'budgetPreference' && profile.preferences?.travelPersona?.budgetAmount && (
+                      <p className="text-sm mt-1">
+                        Budget: €{profile.preferences.travelPersona.budgetAmount}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         ) : (
           <div className="text-center py-8">
             <Compass className="h-12 w-12 text-gray-400 mx-auto mb-4" />
