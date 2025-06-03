@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { 
-  TextField, 
-  Button, 
-  Typography, 
-  Link, 
-  Box, 
-  Paper, 
+import {
+  TextField,
+  Button,
+  Typography,
+  Link,
+  Box,
+  Paper,
   Divider,
   ThemeProvider,
   createTheme
@@ -18,7 +18,6 @@ interface LoginFormProps {
   onSignUp: () => void;
 }
 
-// Create a custom theme with your purple color
 const theme = createTheme({
   palette: {
     primary: {
@@ -35,7 +34,7 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
   borderRadius: theme.shape.borderRadius * 2,
 }));
 
-const LoginForm = ({ onLoginSuccess, onForgotPassword, onSignUp }: LoginFormProps) => {
+const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onForgotPassword, onSignUp }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -45,18 +44,20 @@ const LoginForm = ({ onLoginSuccess, onForgotPassword, onSignUp }: LoginFormProp
     e.preventDefault();
     setIsLoading(true);
     setError('');
-    
+
     try {
       const response = await fetch('http://127.0.0.1:8000/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      
+
       const data = await response.json();
-      
+
       if (response.ok) {
-        localStorage.setItem('token', data.token);
+        localStorage.setItem('token', data.access_token);
+        localStorage.setItem('userId', data.user.id);
+        localStorage.setItem('user', JSON.stringify(data.user));
         onLoginSuccess();
       } else {
         setError(data.message || 'Login failed. Please check your credentials.');
@@ -72,27 +73,20 @@ const LoginForm = ({ onLoginSuccess, onForgotPassword, onSignUp }: LoginFormProp
     <ThemeProvider theme={theme}>
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', p: 2 }}>
         <StyledPaper elevation={3}>
-          <Typography 
-            variant="h4" 
-            component="h1" 
-            gutterBottom 
-            align="center" 
-            color="primary"
-            sx={{ fontWeight: 'bold' }}
-          >
+          <Typography variant="h4" component="h1" gutterBottom align="center" color="primary" sx={{ fontWeight: 'bold' }}>
             Welcome Back
           </Typography>
-          
+
           <Typography variant="body2" color="textSecondary" align="center" gutterBottom>
             Please enter your credentials to login
           </Typography>
-          
+
           {error && (
             <Typography color="error" align="center" sx={{ mt: 2 }}>
               {error}
             </Typography>
           )}
-          
+
           <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
             <TextField
               label="Email Address"
@@ -104,11 +98,9 @@ const LoginForm = ({ onLoginSuccess, onForgotPassword, onSignUp }: LoginFormProp
               margin="normal"
               required
               autoFocus
-              InputLabelProps={{
-                shrink: true,
-              }}
+              InputLabelProps={{ shrink: true }}
             />
-            
+
             <TextField
               label="Password"
               variant="outlined"
@@ -118,15 +110,13 @@ const LoginForm = ({ onLoginSuccess, onForgotPassword, onSignUp }: LoginFormProp
               fullWidth
               margin="normal"
               required
-              InputLabelProps={{
-                shrink: true,
-              }}
+              InputLabelProps={{ shrink: true }}
             />
-            
+
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-              <Link 
-                component="button" 
-                type="button" 
+              <Link
+                component="button"
+                type="button"
                 variant="body2"
                 onClick={onForgotPassword}
                 underline="hover"
@@ -135,7 +125,7 @@ const LoginForm = ({ onLoginSuccess, onForgotPassword, onSignUp }: LoginFormProp
                 Forgot password?
               </Link>
             </Box>
-            
+
             <Button
               type="submit"
               variant="contained"
@@ -147,16 +137,16 @@ const LoginForm = ({ onLoginSuccess, onForgotPassword, onSignUp }: LoginFormProp
             >
               {isLoading ? 'Logging in...' : 'Login'}
             </Button>
-            
+
             <Divider sx={{ my: 3, color: 'text.secondary' }}>OR</Divider>
-            
+
             <Box sx={{ textAlign: 'center', mt: 2 }}>
               <Typography variant="body2" display="inline">
                 Don't have an account?{' '}
               </Typography>
-              <Link 
-                component="button" 
-                type="button" 
+              <Link
+                component="button"
+                type="button"
                 variant="body2"
                 onClick={onSignUp}
                 underline="hover"

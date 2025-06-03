@@ -38,6 +38,7 @@ function App() {
   // Check auth status on load
   useEffect(() => {
     const token = localStorage.getItem('token');
+    const userId = localStorage.getItem('userId');
     if (token) {
       setIsAuthenticated(true);
       setActiveTab('explore');
