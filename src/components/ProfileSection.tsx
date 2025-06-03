@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CreditCard, ChevronRight, Settings, Bell, Shield, HelpCircle, MapPin, Edit, Plus, X, Compass, Check, Users, Activity, DollarSign, Calendar } from 'lucide-react';
 
 interface CreditCardType {
@@ -251,30 +251,15 @@ const TravelPersonaQuiz: React.FC<{
 
 const ProfileSection: React.FC = () => {
   const [profile, setProfile] = useState<Profile>({
-    id: 'user-123',
-    full_name: 'John Doe',
-    email: 'john.doe@example.com',
-    location: 'New York, USA',
+    id: '',
+    full_name: '',
+    email: '',
+    avatar_url: '',
+    location: '',
     preferences: {}
   });
 
-  const [cards, setCards] = useState<CreditCardType[]>([
-    {
-      id: 'card-1',
-      last4: '4242',
-      expiry: '04/25',
-      type: 'visa',
-      isDefault: true
-    },
-    {
-      id: 'card-2',
-      last4: '5555',
-      expiry: '12/23',
-      type: 'mastercard',
-      isDefault: false
-    }
-  ]);
-
+  const [cards, setCards] = useState<CreditCardType[]>([]);
   const [showAddCard, setShowAddCard] = useState(false);
   const [cardFormData, setCardFormData] = useState<CardFormData>({
     number: '',
@@ -284,8 +269,65 @@ const ProfileSection: React.FC = () => {
   const [cardError, setCardError] = useState<string>('');
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [showPersonaQuiz, setShowPersonaQuiz] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleAddCard = (e: React.FormEvent) => {
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    return {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    };
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Get user info
+        const userRes = await fetch('http://127.0.0.1:8000/api/auth/user', {
+          headers: getAuthHeaders(),
+        });
+        const userData = await userRes.json();
+        setProfile({
+          id: userData.id,
+          full_name: `${userData.first_name} ${userData.last_name}`,
+          email: userData.email,
+          avatar_url: userData.avatar_url || '',
+          location: userData.location || '',
+          preferences: {},
+        });
+
+        // Get credit cards
+        const cardsRes = await fetch('http://127.0.0.1:8000/api/credit-cards', {
+          headers: getAuthHeaders(),
+        });
+        const cardsData = await cardsRes.json();
+        setCards(cardsData);
+
+        // Get user preferences
+        const prefRes = await fetch('http://127.0.0.1:8000/api/user-preferences', {
+          headers: getAuthHeaders(),
+        });
+        const prefData = await prefRes.json();
+        setProfile(prev => ({
+          ...prev,
+          preferences: {
+            ...prev.preferences,
+            travelPersona: prefData.travel_persona || {},
+          },
+        }));
+      } catch (err) {
+        console.error('Error fetching profile data:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const handleAddCard = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (cardFormData.number.length !== 16) {
@@ -303,53 +345,98 @@ const ProfileSection: React.FC = () => {
       return;
     }
 
-    const newCard: CreditCardType = {
-      id: `card-${Date.now()}`,
-      last4: cardFormData.number.slice(-4),
-      expiry: cardFormData.expiry,
-      type: cardFormData.number.startsWith('4') ? 'visa' : 'mastercard',
-      isDefault: cards.length === 0
-    };
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/credit-cards', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          number: cardFormData.number,
+          expiry: cardFormData.expiry,
+          cvc: cardFormData.cvc,
+        }),
+      });
 
-    setCards([...cards, newCard]);
-    setShowAddCard(false);
-    setCardFormData({ number: '', expiry: '', cvc: '' });
-    setCardError('');
-  };
-
-  const setDefaultCard = (cardId: string) => {
-    setCards(cards.map(card => ({
-      ...card,
-      isDefault: card.id === cardId
-    })));
-  };
-
-  const removeCard = (cardId: string) => {
-    setCards(cards.filter(card => card.id !== cardId));
-  };
-
-  const handlePersonaComplete = (answers: Record<string, string | string[] | number>) => {
-    setProfile(prev => ({
-      ...prev,
-      preferences: {
-        ...prev.preferences,
-        travelPersona: answers
+      if (response.ok) {
+        const updatedCards = await fetch('http://127.0.0.1:8000/api/credit-cards', {
+          headers: getAuthHeaders(),
+        }).then(res => res.json());
+        setCards(updatedCards);
+        setShowAddCard(false);
+        setCardFormData({ number: '', expiry: '', cvc: '' });
+        setCardError('');
+      } else {
+        setCardError('Failed to add card');
       }
-    }));
-    setShowPersonaQuiz(false);
+    } catch (err) {
+      setCardError('Error adding card. Please try again.');
+      console.error('Error adding card:', err);
+    }
+  };
+
+  const setDefaultCard = async (cardId: string) => {
+    try {
+      await fetch(`http://127.0.0.1:8000/api/credit-cards/${cardId}/default`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+      });
+      const updated = await fetch('http://127.0.0.1:8000/api/credit-cards', {
+        headers: getAuthHeaders(),
+      }).then(res => res.json());
+      setCards(updated);
+    } catch (err) {
+      console.error('Error setting default card:', err);
+    }
+  };
+
+  const removeCard = async (cardId: string) => {
+    try {
+      await fetch(`http://127.0.0.1:8000/api/credit-cards/${cardId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      setCards(prev => prev.filter(c => c.id !== cardId));
+    } catch (err) {
+      console.error('Error removing card:', err);
+    }
+  };
+
+  const handlePersonaComplete = async (answers: Record<string, string | string[] | number>) => {
+    try {
+      // Update local state first for better UX
+      setProfile(prev => ({
+        ...prev,
+        preferences: {
+          ...prev.preferences,
+          travelPersona: answers
+        }
+      }));
+      
+      // Save to backend
+      await fetch('http://127.0.0.1:8000/api/user-preferences', {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ travel_persona: answers }),
+      });
+      
+      setShowPersonaQuiz(false);
+    } catch (err) {
+      console.error('Error saving travel persona:', err);
+    }
   };
 
   const handleLogout = () => {
-    // Clear user data from localStorage
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    
-    // For a real app, you might want to redirect to login page instead
     window.location.reload();
-    
-    // If using React Router:
-    // navigate('/login');
   };
+
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -403,7 +490,7 @@ const ProfileSection: React.FC = () => {
             onComplete={handlePersonaComplete}
             initialAnswers={profile.preferences?.travelPersona || {}}
           />
-        ) : profile.preferences?.travelPersona ? (
+        ) : profile.preferences?.travelPersona && Object.keys(profile.preferences.travelPersona).length > 0 ? (
           <div className="space-y-4">
             <h4 className="font-medium">Your Travel Style:</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -508,60 +595,59 @@ const ProfileSection: React.FC = () => {
 
       {/* Settings Cards */}
       <div className="space-y-4">
-  <div className="bg-white rounded-xl p-4 shadow-sm space-y-4">
-    <div 
-      className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
-      onClick={() => setActiveSection('account')}
-    >
-      <div className="flex items-center space-x-3">
-        <Settings className="text-gray-600" />
-        <span>Account Settings</span>
+        <div className="bg-white rounded-xl p-4 shadow-sm space-y-4">
+          <div 
+            className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
+            onClick={() => setActiveSection('account')}
+          >
+            <div className="flex items-center space-x-3">
+              <Settings className="text-gray-600" />
+              <span>Account Settings</span>
+            </div>
+            <ChevronRight className="text-gray-400" />
+          </div>
+          <div 
+            className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
+            onClick={() => setActiveSection('notifications')}
+          >
+            <div className="flex items-center space-x-3">
+              <Bell className="text-gray-600" />
+              <span>Notifications</span>
+            </div>
+            <ChevronRight className="text-gray-400" />
+          </div>
+          <div 
+            className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
+            onClick={() => setActiveSection('privacy')}
+          >
+            <div className="flex items-center space-x-3">
+              <Shield className="text-gray-600" />
+              <span>Privacy & Security</span>
+            </div>
+            <ChevronRight className="text-gray-400" />
+          </div>
+          <div 
+            className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
+            onClick={() => setActiveSection('help')}
+          >
+            <div className="flex items-center space-x-3">
+              <HelpCircle className="text-gray-600" />
+              <span>Help & Support</span>
+            </div>
+            <ChevronRight className="text-gray-400" />
+          </div>
+          <div 
+            className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
+            onClick={handleLogout}
+          >
+            <div className="flex items-center space-x-3">
+              <X className="text-gray-600" />
+              <span>Logout</span>
+            </div>
+            <ChevronRight className="text-gray-400" />
+          </div>
+        </div>
       </div>
-      <ChevronRight className="text-gray-400" />
-    </div>
-    <div 
-      className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
-      onClick={() => setActiveSection('notifications')}
-    >
-      <div className="flex items-center space-x-3">
-        <Bell className="text-gray-600" />
-        <span>Notifications</span>
-      </div>
-      <ChevronRight className="text-gray-400" />
-    </div>
-    <div 
-      className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
-      onClick={() => setActiveSection('privacy')}
-    >
-      <div className="flex items-center space-x-3">
-        <Shield className="text-gray-600" />
-        <span>Privacy & Security</span>
-      </div>
-      <ChevronRight className="text-gray-400" />
-    </div>
-    <div 
-      className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
-      onClick={() => setActiveSection('help')}
-    >
-      <div className="flex items-center space-x-3">
-        <HelpCircle className="text-gray-600" />
-        <span>Help & Support</span>
-      </div>
-      <ChevronRight className="text-gray-400" />
-    </div>
-    {/* Logout Option - Now matches other items */}
-    <div 
-      className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
-      onClick={handleLogout}
-    >
-      <div className="flex items-center space-x-3">
-        <X className="text-gray-600" />
-        <span>Logout</span>
-      </div>
-      <ChevronRight className="text-gray-400" />
-    </div>
-  </div>
-</div>
 
       {/* Add Card Modal */}
       {showAddCard && (
