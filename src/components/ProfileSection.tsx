@@ -328,51 +328,55 @@ const ProfileSection: React.FC = () => {
   }, []);
 
   const handleAddCard = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (cardFormData.number.length !== 16) {
-      setCardError('Card number must be 16 digits');
-      return;
-    }
+  e.preventDefault();
 
-    if (cardFormData.expiry.length !== 5) {
-      setCardError('Please enter a valid expiry date (MM/YY)');
-      return;
-    }
+  const { number, expiry, cvc } = cardFormData;
 
-    if (cardFormData.cvc.length < 3) {
-      setCardError('CVC must be at least 3 digits');
-      return;
-    }
+  if (number.length !== 16) {
+    setCardError('Card number must be 16 digits');
+    return;
+  }
 
-    try {
-      const response = await fetch('http://127.0.0.1:8000/api/credit-cards', {
-        method: 'POST',
+  if (expiry.length !== 5) {
+    setCardError('Please enter a valid expiry date (MM/YY)');
+    return;
+  }
+
+  if (cvc.length < 3) {
+    setCardError('CVC must be at least 3 digits');
+    return;
+  }
+
+  const last4 = number.slice(-4);
+  const type = number.startsWith('4') ? 'visa' : 'mastercard'; // Very simple check
+
+  try {
+    const response = await fetch('http://127.0.0.1:8000/api/auth/credit-cards', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        last4,
+        expiry,
+        type
+      }),
+    });
+
+    if (response.ok) {
+      const updatedCards = await fetch('http://127.0.0.1:8000/api/auth/credit-cards', {
         headers: getAuthHeaders(),
-        body: JSON.stringify({
-          number: cardFormData.number,
-          expiry: cardFormData.expiry,
-          cvc: cardFormData.cvc,
-        }),
-      });
-
-      if (response.ok) {
-        const updatedCards = await fetch('http://127.0.0.1:8000/api/credit-cards', {
-          headers: getAuthHeaders(),
-        }).then(res => res.json());
-        setCards(updatedCards);
-        setShowAddCard(false);
-        setCardFormData({ number: '', expiry: '', cvc: '' });
-        setCardError('');
-      } else {
-        setCardError('Failed to add card');
-      }
-    } catch (err) {
-      setCardError('Error adding card. Please try again.');
-      console.error('Error adding card:', err);
+      }).then(res => res.json());
+      setCards(updatedCards);
+      setShowAddCard(false);
+      setCardFormData({ number: '', expiry: '', cvc: '' });
+      setCardError('');
+    } else {
+      setCardError('Failed to add card');
     }
-  };
-
+  } catch (err) {
+    setCardError('Error adding card. Please try again.');
+    console.error('Error adding card:', err);
+  }
+};
   const setDefaultCard = async (cardId: string) => {
     try {
       await fetch(`http://127.0.0.1:8000/api/credit-cards/${cardId}/default`, {
