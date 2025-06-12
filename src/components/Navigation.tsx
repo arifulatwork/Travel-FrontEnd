@@ -33,7 +33,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, darkMo
     <nav className={`fixed left-0 top-0 bottom-0 w-64 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-r p-6`}>
       <div className="flex flex-col h-full">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-purple-600">TravelApp</h1>
+          <h1 className="text-2xl font-bold text-purple-600">Community</h1>
         </div>
         
         <div className="space-y-2">
