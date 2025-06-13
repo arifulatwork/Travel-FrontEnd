@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Phone, Video, MoreVertical, Send, Image, Paperclip, Smile } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import axios from 'axios';
+import {
+  Phone, Video, MoreVertical, Send, Image, Paperclip, Smile
+} from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface Message {
-  id: string;
+  id: number | string;
   content: string;
   sender_id: string;
   receiver_id: string;
@@ -17,7 +19,7 @@ interface ChatData {
   name: string;
   avatar?: string;
   type: 'guide' | 'support' | 'traveler';
-  user_id?: string;
+  user_id: string; // ✅ required for Laravel endpoint
 }
 
 interface ChatWindowProps {
@@ -32,7 +34,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData, onClose }) =>
   const [messages, setMessages] = useState<Message[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -44,130 +45,68 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData, onClose }) =>
   }, [messages]);
 
   useEffect(() => {
-    if (user) {
+    if (user && chatData?.user_id) {
       fetchMessages();
-      subscribeToMessages();
       markMessagesAsRead();
     }
   }, [chatId, user]);
 
   const fetchMessages = async () => {
     try {
-      if (!user) {
-        setError('Please log in to view messages');
-        return;
-      }
-
-      // Get the actual UUID for the chat participant
-      let receiverId = chatData.user_id;
-      
-      if (!receiverId) {
-        // If no user_id is provided, use a default support account ID
-        // In a real application, you would have a proper way to handle this
-        // For now, we'll use a placeholder message
-        setMessages([{
-          id: 'welcome',
-          content: `Welcome to ${chatData.type === 'support' ? 'customer support' : chatData.type} chat! How can we help you today?`,
-          sender_id: 'system',
-          receiver_id: user.id,
-          created_at: new Date().toISOString(),
-          read: false
-        }]);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${receiverId}),and(sender_id.eq.${receiverId},receiver_id.eq.${user.id})`)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      setMessages(data || []);
+      const response = await axios.get(
+        `http://127.0.0.1:8000/api/messages/${chatData.user_id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        }
+      );
+      setMessages(response.data);
     } catch (err) {
-      console.error('Error fetching messages:', err);
+      console.error(err);
       setError('Failed to load messages');
     } finally {
       setLoading(false);
     }
   };
 
-  const subscribeToMessages = () => {
-    if (!user) return;
-
-    const channel = supabase
-      .channel('messages')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `or(sender_id=eq.${user.id},receiver_id=eq.${user.id})`
-        },
-        (payload) => {
-          const newMessage = payload.new as Message;
-          setMessages(prev => [...prev, newMessage]);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
-
   const markMessagesAsRead = async () => {
-    if (!user) return;
-
-    await supabase
-      .from('messages')
-      .update({ read: true })
-      .eq('receiver_id', user.id)
-      .eq('read', false);
+    try {
+      await axios.post(
+        `http://127.0.0.1:8000/api/messages/mark-read`, // if you implement it
+        { sender_id: chatData.user_id },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        }
+      );
+    } catch (err) {
+      console.warn('Failed to mark messages as read');
+    }
   };
 
   const handleSend = async () => {
     if (!newMessage.trim() || !user) return;
 
     try {
-      // Get the actual UUID for the chat participant
-      let receiverId = chatData.user_id;
-      
-      if (!receiverId) {
-        // If no user_id is provided, show a message to the user
-        setMessages(prev => [...prev, {
-          id: Date.now().toString(),
+      const response = await axios.post(
+        `http://127.0.0.1:8000/api/auth/messages/send`,
+        {
+          receiver_id: chatData.user_id,
           content: newMessage,
-          sender_id: user.id,
-          receiver_id: 'system',
-          created_at: new Date().toISOString(),
-          read: false
-        }, {
-          id: 'response-' + Date.now().toString(),
-          content: "Thank you for your message. A representative will get back to you soon.",
-          sender_id: 'system',
-          receiver_id: user.id,
-          created_at: new Date().toISOString(),
-          read: false
-        }]);
-        setNewMessage('');
-        return;
-      }
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        }
+      );
 
-      const { error } = await supabase
-        .from('messages')
-        .insert({
-          content: newMessage,
-          sender_id: user.id,
-          receiver_id: receiverId,
-          read: false
-        });
-
-      if (error) throw error;
+      setMessages((prev) => [...prev, response.data]);
       setNewMessage('');
     } catch (err) {
-      console.error('Error sending message:', err);
+      console.error(err);
       setError('Failed to send message');
     }
   };
@@ -203,7 +142,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData, onClose }) =>
 
   return (
     <div className="flex-1 bg-white rounded-xl shadow-sm flex flex-col">
-      {/* Chat header */}
+      {/* Chat Header */}
       <div className="p-4 border-b flex items-center justify-between">
         <div className="flex items-center space-x-3">
           {chatData.avatar ? (
@@ -214,9 +153,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData, onClose }) =>
             />
           ) : (
             <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-              <span className="text-purple-600 font-medium">
-                {chatData.name.charAt(0)}
-              </span>
+              <span className="text-purple-600 font-medium">{chatData.name.charAt(0)}</span>
             </div>
           )}
           <div>
@@ -225,26 +162,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData, onClose }) =>
           </div>
         </div>
         <div className="flex items-center space-x-4">
-          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-            <Phone className="h-5 w-5 text-gray-600" />
-          </button>
-          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-            <Video className="h-5 w-5 text-gray-600" />
-          </button>
-          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-            <MoreVertical className="h-5 w-5 text-gray-600" />
-          </button>
+          <Phone className="h-5 w-5 text-gray-600" />
+          <Video className="h-5 w-5 text-gray-600" />
+          <MoreVertical className="h-5 w-5 text-gray-600" />
         </div>
       </div>
 
-      {/* Messages area */}
+      {/* Message List */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
-            {error}
-          </div>
-        )}
-        
         {messages.map((message) => (
           <div
             key={message.id}
@@ -258,12 +183,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData, onClose }) =>
               }`}
             >
               <p className="text-sm">{message.content}</p>
-              <span className={`text-xs mt-1 block ${
-                message.sender_id === user.id ? 'text-purple-200' : 'text-gray-500'
-              }`}>
-                {new Date(message.created_at).toLocaleTimeString([], { 
+              <span
+                className={`text-xs mt-1 block ${
+                  message.sender_id === user.id ? 'text-purple-200' : 'text-gray-500'
+                }`}
+              >
+                {new Date(message.created_at).toLocaleTimeString([], {
                   hour: '2-digit',
-                  minute: '2-digit'
+                  minute: '2-digit',
                 })}
               </span>
             </div>
@@ -286,15 +213,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData, onClose }) =>
             />
             <div className="flex items-center justify-between pt-2 border-t border-gray-200">
               <div className="flex space-x-2">
-                <button className="p-1 hover:bg-gray-200 rounded-full transition-colors">
-                  <Image className="h-5 w-5 text-gray-600" />
-                </button>
-                <button className="p-1 hover:bg-gray-200 rounded-full transition-colors">
-                  <Paperclip className="h-5 w-5 text-gray-600" />
-                </button>
-                <button className="p-1 hover:bg-gray-200 rounded-full transition-colors">
-                  <Smile className="h-5 w-5 text-gray-600" />
-                </button>
+                <Image className="h-5 w-5 text-gray-600" />
+                <Paperclip className="h-5 w-5 text-gray-600" />
+                <Smile className="h-5 w-5 text-gray-600" />
               </div>
             </div>
           </div>

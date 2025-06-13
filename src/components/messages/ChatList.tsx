@@ -1,85 +1,103 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import { User } from 'lucide-react';
 
-interface Chat {
+interface ChatUser {
   id: string;
   name: string;
   avatar?: string;
-  type: 'guide' | 'support' | 'traveler';
+  type: 'traveler' | 'guide' | 'support';
+  user_id: string;
 }
 
 interface ChatListProps {
   selectedChat: string | null;
-  onSelectChat: (chatId: string) => void;
+  onSelectChat: (chatId: string, chatUser: ChatUser) => void;
   searchQuery: string;
 }
 
 const ChatList: React.FC<ChatListProps> = ({ selectedChat, onSelectChat, searchQuery }) => {
-  const chats: Chat[] = [
-    {
-      id: 'guide-1',
-      name: 'Maria Garcia',
-      type: 'guide',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&h=120&q=80'
-    },
-    {
-      id: 'support-1',
-      name: 'Support Team',
-      type: 'support'
-    },
-    {
-      id: 'traveler-1',
-      name: 'Alex Thompson',
-      type: 'traveler',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=120&h=120&q=80'
-    }
-  ];
+  const [chatUsers, setChatUsers] = useState<ChatUser[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredChats = chats.filter(chat =>
+  useEffect(() => {
+    const fetchConnections = async () => {
+      try {
+        const response = await axios.get('http://127.0.0.1:8000/api/auth/network/connections', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        const connections = response.data;
+
+        // Get the other person from each connection
+        const currentUserId = localStorage.getItem('user_id');
+        const users: ChatUser[] = connections.map((conn: any) => {
+          const user = conn.requester.id.toString() === currentUserId
+            ? conn.receiver
+            : conn.requester;
+
+          return {
+            id: conn.id.toString(),
+            name: `${user.first_name} ${user.last_name}`,
+            avatar: user.avatar_url,
+            type: 'traveler',
+            user_id: user.id.toString()
+          };
+        });
+
+        setChatUsers(users);
+      } catch (err) {
+        console.error('Failed to fetch connections:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchConnections();
+  }, []);
+
+  const filteredChats = chatUsers.filter(chat =>
     chat.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="divide-y divide-gray-100">
-        {filteredChats.map((chat) => (
-          <button
-            key={chat.id}
-            onClick={() => onSelectChat(chat.id)}
-            className={`w-full p-4 flex items-start space-x-3 hover:bg-gray-50 transition-colors ${
-              selectedChat === chat.id ? 'bg-purple-50' : ''
-            }`}
-          >
-            <div className="relative flex-shrink-0">
-              {chat.avatar ? (
-                <img
-                  src={chat.avatar}
-                  alt={chat.name}
-                  className="w-12 h-12 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
-                  <User className="h-6 w-6 text-purple-600" />
-                </div>
-              )}
-              {chat.type === 'guide' && (
-                <div className="absolute -top-1 -right-1 bg-green-500 text-xs text-white px-2 py-0.5 rounded-full">
-                  Guide
-                </div>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex justify-between items-baseline mb-1">
-                <h4 className="font-medium text-gray-900 truncate">{chat.name}</h4>
+        {loading ? (
+          <p className="p-4 text-sm text-gray-500">Loading chats...</p>
+        ) : filteredChats.length === 0 ? (
+          <p className="p-4 text-sm text-gray-500">No connections found</p>
+        ) : (
+          filteredChats.map((chat) => (
+            <button
+              key={chat.user_id}
+              onClick={() => onSelectChat(chat.user_id, chat)}
+              className={`w-full p-4 flex items-start space-x-3 hover:bg-gray-50 transition-colors ${
+                selectedChat === chat.user_id ? 'bg-purple-50' : ''
+              }`}
+            >
+              <div className="relative flex-shrink-0">
+                {chat.avatar ? (
+                  <img
+                    src={chat.avatar}
+                    alt={chat.name}
+                    className="w-12 h-12 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
+                    <User className="h-6 w-6 text-purple-600" />
+                  </div>
+                )}
               </div>
-              <p className="text-sm text-gray-600 truncate">
-                {chat.type === 'guide' && 'Tour Guide'}
-                {chat.type === 'support' && 'Customer Support'}
-                {chat.type === 'traveler' && 'Fellow Traveler'}
-              </p>
-            </div>
-          </button>
-        ))}
+              <div className="flex-1 min-w-0">
+                <h4 className="font-medium text-gray-900 truncate">{chat.name}</h4>
+                <p className="text-sm text-gray-600 truncate">Traveler</p>
+              </div>
+            </button>
+          ))
+        )}
       </div>
     </div>
   );

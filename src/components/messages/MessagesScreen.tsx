@@ -1,11 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { Search, MessageCircle, Info, Calendar, Users, Plus, Video, MapPin, Lock, Crown, Check, X, CreditCard, UserPlus, Globe, Mail, Bell, UserCheck, Lightbulb } from 'lucide-react';
+import React, { useState } from 'react';
+import {
+  Search, MessageCircle, Check, UserPlus, Lightbulb
+} from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ChatList from './ChatList';
 import ChatWindow from './ChatWindow';
 import TravelTipsSection from './TravelTipsSection';
 
-// ... (keep existing interfaces and imports)
+interface ChatUser {
+  id: string;
+  name: string;
+  avatar?: string;
+  type: 'traveler' | 'guide' | 'support';
+  user_id: string;
+}
 
 const MessagesScreen: React.FC = () => {
   const location = useLocation();
@@ -13,12 +21,9 @@ const MessagesScreen: React.FC = () => {
   const [activeSection, setActiveSection] = useState<'chats' | 'tips'>('chats');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
+  const [selectedChatUser, setSelectedChatUser] = useState<ChatUser | null>(null);
   const [showInviteToChat, setShowInviteToChat] = useState(false);
-  const [selectedUsers, setSelectedUsers] = useState<AppUser[]>([]);
-  const [userSearchQuery, setUserSearchQuery] = useState('');
   const [showInviteSuccess, setShowInviteSuccess] = useState(false);
-
-  // ... (keep existing code)
 
   return (
     <div className="max-w-7xl mx-auto p-4">
@@ -71,6 +76,7 @@ const MessagesScreen: React.FC = () => {
 
       {activeSection === 'chats' ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Chat list */}
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="p-4 border-b">
               <div className="relative">
@@ -86,21 +92,24 @@ const MessagesScreen: React.FC = () => {
             </div>
             <ChatList
               selectedChat={selectedChat}
-              onSelectChat={setSelectedChat}
+              onSelectChat={(chatId, userData) => {
+                setSelectedChat(chatId);
+                setSelectedChatUser(userData);
+              }}
               searchQuery={searchQuery}
             />
           </div>
-          {selectedChat ? (
+
+          {/* Chat window */}
+          {selectedChat && selectedChatUser ? (
             <div className="md:col-span-2">
               <ChatWindow
                 chatId={selectedChat}
-                chatData={{
-                  id: selectedChat,
-                  name: 'Maria Garcia',
-                  type: 'guide',
-                  avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&h=120&q=80'
+                chatData={selectedChatUser}
+                onClose={() => {
+                  setSelectedChat(null);
+                  setSelectedChatUser(null);
                 }}
-                onClose={() => setSelectedChat(null)}
               />
             </div>
           ) : (
@@ -116,9 +125,6 @@ const MessagesScreen: React.FC = () => {
       ) : (
         <TravelTipsSection />
       )}
-
-      {/* Keep existing modals */}
-      {/* ... */}
     </div>
   );
 };
