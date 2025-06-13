@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Users, Search, MapPin, Calendar, Globe, Languages, Briefcase, UserPlus, X, MessageCircle, Mail, Clock, Video, Coffee, Plus, Check, Link, Copy, Tag } from 'lucide-react';
 
 interface User {
@@ -55,6 +56,7 @@ const NetworkingScreen: React.FC = () => {
   const [showMeetingSuccess, setShowMeetingSuccess] = useState(false);
   const [showInviteSuccess, setShowInviteSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState<'buddies' | 'meetings'>('buddies');
+  const [travelBuddies, setTravelBuddies] = useState<TravelBuddy[]>([]);
   
   const [meetingForm, setMeetingForm] = useState<Partial<Meeting>>({
     title: '',
@@ -73,50 +75,37 @@ const NetworkingScreen: React.FC = () => {
 
   const locations = ['Barcelona', 'Madrid', 'Paris', 'Rome', 'Berlin', 'Amsterdam'];
 
-  const users: User[] = [
-    { id: '1', name: 'Emma Wilson', email: 'emma.w@example.com', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&h=120&q=80' },
-    { id: '2', name: 'Michael Chen', email: 'michael.c@example.com', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=120&h=120&q=80' },
-    { id: '3', name: 'Sofia Garcia', email: 'sofia.g@example.com', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80' }
-  ];
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await axios.get('http://127.0.0.1:8000/api/auth/network/users', {
+          params: {
+            location: selectedLocation,
+            search: searchQuery
+          },
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        setTravelBuddies(response.data.map((user: any) => ({
+          id: user.id,
+          name: `${user.first_name} ${user.last_name}`,
+          location: user.location || '',
+          interests: user.interests || [],
+          languages: user.languages || [],
+          travelDates: user.travel_dates || '',
+          avatar: user.avatar_url,
+          occupation: user.occupation || '',
+          bio: user.bio || '',
+          connectionStatus: user.connection_status || 'none'
+        })));
+      } catch (error) {
+        console.error('Failed to fetch users:', error);
+      }
+    };
 
-  const travelBuddies: TravelBuddy[] = [
-    {
-      id: '1',
-      name: 'Emma Wilson',
-      location: 'Barcelona',
-      interests: ['Photography', 'Hiking', 'Local Cuisine'],
-      languages: ['English', 'Spanish'],
-      travelDates: 'Mar 15 - Apr 5',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&h=120&q=80',
-      occupation: 'Photographer',
-      bio: 'Adventure seeker looking to capture beautiful moments across Europe',
-      connectionStatus: 'none'
-    },
-    {
-      id: '2',
-      name: 'Michael Chen',
-      location: 'Madrid',
-      interests: ['Architecture', 'Museums', 'Street Food'],
-      languages: ['English', 'Mandarin', 'Spanish'],
-      travelDates: 'Mar 20 - Apr 10',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=120&h=120&q=80',
-      occupation: 'Architect',
-      bio: 'Exploring European architecture and its influence on modern design',
-      connectionStatus: 'connected'
-    },
-    {
-      id: '3',
-      name: 'Sofia Garcia',
-      location: 'Barcelona',
-      interests: ['Art', 'Wine Tasting', 'Cultural Events'],
-      languages: ['Spanish', 'English', 'French'],
-      travelDates: 'Mar 18 - Apr 8',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80',
-      occupation: 'Art Curator',
-      bio: 'Art enthusiast exploring galleries and cultural spaces',
-      connectionStatus: 'pending'
-    }
-  ];
+    fetchUsers();
+  }, [selectedLocation, searchQuery]);
 
   const filteredBuddies = travelBuddies.filter(buddy => {
     const matchesSearch = 
@@ -134,13 +123,32 @@ const NetworkingScreen: React.FC = () => {
     setShowConnectionModal(true);
   };
 
-  const sendConnectionRequest = () => {
-    console.log('Sending connection request to:', selectedBuddy?.name);
-    console.log('Message:', connectionMessage);
-    
-    setShowConnectionModal(false);
-    setConnectionMessage('');
-    setSelectedBuddy(null);
+  const sendConnectionRequest = async () => {
+    if (!selectedBuddy) return;
+
+    try {
+      await axios.post('http://127.0.0.1:8000/api/auth/network/request', {
+        receiver_id: selectedBuddy.id,
+        message: connectionMessage
+      }, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      setTravelBuddies(prev =>
+        prev.map(b =>
+          b.id === selectedBuddy.id ? { ...b, connectionStatus: 'pending' } : b
+        )
+      );
+
+      setShowConnectionModal(false);
+      setConnectionMessage('');
+      setSelectedBuddy(null);
+    } catch (error: any) {
+      console.error('Error sending connection request:', error.response?.data || error);
+      alert(error.response?.data?.message || 'Request failed');
+    }
   };
 
   const handleInvite = () => {
