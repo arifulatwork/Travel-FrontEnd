@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
+import { Elements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
+
 import Navigation from './components/Navigation';
 import ExploreSection from './components/ExploreSection';
 import ProfileSection from './components/ProfileSection';
@@ -11,6 +14,9 @@ import NetworkingScreen from './components/networking/NetworkingScreen';
 import PremiumSection from './components/premium/PremiumSection';
 import LoginForm from './components/auth/LoginForm';
 import { useSettings } from './contexts/SettingsContext';
+
+// 🔐 Stripe publishable key from .env (Vite syntax)
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_yourKeyHere');
 
 const TRANSLATIONS = {
   en: {
@@ -35,10 +41,8 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
-  // Check auth status on load
   useEffect(() => {
     const token = localStorage.getItem('token');
-    const userId = localStorage.getItem('userId');
     if (token) {
       setIsAuthenticated(true);
       setActiveTab('explore');
@@ -62,13 +66,13 @@ function App() {
       handleLogout();
       return;
     }
-    
+
     if (!isAuthenticated && tab !== 'login') {
       setShowLoginPrompt(true);
       setActiveTab('login');
       return;
     }
-    
+
     setActiveTab(tab);
   };
 
@@ -101,21 +105,23 @@ function App() {
 
   return (
     <Router>
-      <div className={`min-h-screen ${settings.appearance.darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
-        <Navigation 
-          activeTab={activeTab} 
-          setActiveTab={handleTabChange}
-          darkMode={settings.appearance.darkMode}
-          translations={{
-            ...TRANSLATIONS.en,
-            login: isAuthenticated ? 'Logout' : 'Login'
-          }}
-        />
-        
-        <main className={`flex-1 p-8 ml-64 ${settings.appearance.darkMode ? 'text-white' : 'text-gray-900'}`}>
-          {renderContent()}
-        </main>
-      </div>
+      <Elements stripe={stripePromise}>
+        <div className={`min-h-screen ${settings.appearance.darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
+          <Navigation 
+            activeTab={activeTab}
+            setActiveTab={handleTabChange}
+            darkMode={settings.appearance.darkMode}
+            translations={{
+              ...TRANSLATIONS.en,
+              login: isAuthenticated ? 'Logout' : 'Login'
+            }}
+          />
+
+          <main className={`flex-1 p-8 ml-64 ${settings.appearance.darkMode ? 'text-white' : 'text-gray-900'}`}>
+            {renderContent()}
+          </main>
+        </div>
+      </Elements>
     </Router>
   );
 }

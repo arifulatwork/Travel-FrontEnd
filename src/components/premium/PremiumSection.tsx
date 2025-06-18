@@ -6,6 +6,7 @@ import {
   BedDouble, Bath, Ruler, Layers, Loader2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
 interface PricingTier {
   id: string;
@@ -60,11 +61,14 @@ const iconMap: Record<string, React.ComponentType<any>> = {
 
 const PremiumSection: React.FC = () => {
   const navigate = useNavigate();
+  const stripe = useStripe();
+  const elements = useElements();
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedTier, setSelectedTier] = useState<PricingTier | null>(null);
   const [activeTab, setActiveTab] = useState<'individual' | 'business'>('individual');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedPropertyType, setSelectedPropertyType] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   
   // State for all data with loading and error states
   const [benefits, setBenefits] = useState<any[]>([]);
@@ -138,6 +142,60 @@ const PremiumSection: React.FC = () => {
   const handleSubscribe = (tier: PricingTier) => {
     setSelectedTier(tier);
     setShowPaymentModal(true);
+  };
+
+  const handlePayment = async () => {
+    if (!stripe || !elements || !selectedTier) return;
+
+    setIsProcessing(true);
+
+    const card = elements.getElement(CardElement);
+    if (!card) {
+      setIsProcessing(false);
+      return;
+    }
+
+    const { token, error: tokenError } = await stripe.createToken(card);
+
+    if (tokenError || !token) {
+      alert(tokenError?.message || 'Payment failed');
+      setIsProcessing(false);
+      return;
+    }
+
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/auth/payments/charge', {
+        method: 'POST',
+        headers: {
+  'Content-Type': 'application/json',
+  'Accept': 'application/json',
+  'Authorization': `Bearer ${localStorage.getItem('token')}` // 👈 this must be valid
+},
+        body: JSON.stringify({
+        token: token.id,
+        amount: selectedTier.price * 100,
+        purpose: 'premium',
+        tier_id: selectedTier.id
+      })
+
+      });
+
+      const result = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(result.message || 'Payment failed');
+      }
+
+      alert('Payment successful! Premium benefits are now active.');
+      setShowPaymentModal(false);
+      setSelectedTier(null);
+      // Optionally refresh data to show new premium status
+      fetchData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Payment failed');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const discountCategories = [
@@ -499,21 +557,47 @@ const PremiumSection: React.FC = () => {
                 <X className="h-6 w-6" />
               </button>
             </div>
-            <div className="mb-6">
+            <div className="mb-4">
               <p className="text-gray-600">
                 You are about to subscribe to our {selectedTier.name} plan at €{selectedTier.price}/{selectedTier.period}
               </p>
             </div>
+            
+            <div className="mb-6">
+              <CardElement 
+                options={{
+                  style: {
+                    base: {
+                      fontSize: '16px',
+                      color: '#424770',
+                      '::placeholder': {
+                        color: '#aab7c4',
+                      },
+                    },
+                    invalid: {
+                      color: '#9e2146',
+                    },
+                  },
+                }}
+              />
+            </div>
+            
             <button
-              onClick={() => {
-                // Handle payment processing
-                setShowPaymentModal(false);
-                setSelectedTier(null);
-              }}
-              className="w-full flex items-center justify-center gap-2 bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors"
+              onClick={handlePayment}
+              disabled={!stripe || isProcessing}
+              className="w-full flex items-center justify-center gap-2 bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors disabled:bg-gray-400"
             >
-              <CreditCard className="h-5 w-5" />
-              Process Payment
+              {isProcessing ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <CreditCard className="h-5 w-5" />
+                  Pay €{selectedTier.price}
+                </>
+              )}
             </button>
           </div>
         </div>
