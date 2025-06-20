@@ -54,7 +54,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData, onClose }) =>
   const fetchMessages = async () => {
     try {
       const response = await axios.get(
-        `http://127.0.0.1:8000/api/messages/${chatData.user_id}`,
+        `http://127.0.0.1:8000/api/auth/messages/${chatData.user_id}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
