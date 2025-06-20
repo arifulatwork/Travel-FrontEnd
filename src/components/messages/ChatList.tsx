@@ -21,42 +21,53 @@ const ChatList: React.FC<ChatListProps> = ({ selectedChat, onSelectChat, searchQ
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchConnections = async () => {
-      try {
-        const response = await axios.get('http://127.0.0.1:8000/api/auth/network/connections', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
+  const fetchConnections = async () => {
+    try {
+      // First fetch current user if user_id is missing
+      let userId = localStorage.getItem('user_id');
+      const token = localStorage.getItem('token');
+
+      if (!userId && token) {
+        const userResponse = await axios.get('http://127.0.0.1:8000/api/auth/user', {
+          headers: { Authorization: `Bearer ${token}` }
         });
-
-        const connections = response.data;
-
-        // Get the other person from each connection
-        const currentUserId = localStorage.getItem('user_id');
-        const users: ChatUser[] = connections.map((conn: any) => {
-          const user = conn.requester.id.toString() === currentUserId
-            ? conn.receiver
-            : conn.requester;
-
-          return {
-            id: conn.id.toString(),
-            name: `${user.first_name} ${user.last_name}`,
-            avatar: user.avatar_url,
-            type: 'traveler',
-            user_id: user.id.toString()
-          };
-        });
-
-        setChatUsers(users);
-      } catch (err) {
-        console.error('Failed to fetch connections:', err);
-      } finally {
-        setLoading(false);
+        userId = userResponse.data.id.toString();
+        localStorage.setItem('user_id', userId);
       }
-    };
 
-    fetchConnections();
-  }, []);
+      console.log('Current logged in user:', userId);
+
+      const response = await axios.get('http://127.0.0.1:8000/api/auth/network/connections', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const connections = response.data;
+
+      const users: ChatUser[] = connections.map((conn: any) => {
+        const isRequester = conn.requester_id.toString() === userId;
+        const user = isRequester ? conn.receiver : conn.requester;
+
+        return {
+          id: conn.id.toString(),
+          name: `${user.first_name} ${user.last_name}`,
+          avatar: user.avatar_url,
+          type: 'traveler',
+          user_id: user.id.toString()
+        };
+      });
+
+      setChatUsers(users);
+    } catch (err) {
+      console.error('Failed to fetch connections:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchConnections();
+}, []);
+
+
 
   const filteredChats = chatUsers.filter(chat =>
     chat.name.toLowerCase().includes(searchQuery.toLowerCase())
