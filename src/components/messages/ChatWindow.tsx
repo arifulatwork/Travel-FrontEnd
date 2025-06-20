@@ -213,9 +213,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData, onClose }) =>
             />
             <div className="flex items-center justify-between pt-2 border-t border-gray-200">
               <div className="flex space-x-2">
-                <Image className="h-5 w-5 text-gray-600" />
+                {/* <Image className="h-5 w-5 text-gray-600" />
                 <Paperclip className="h-5 w-5 text-gray-600" />
-                <Smile className="h-5 w-5 text-gray-600" />
+                <Smile className="h-5 w-5 text-gray-600" /> */}
               </div>
             </div>
           </div>
