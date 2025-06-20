@@ -19,7 +19,7 @@ interface ChatData {
   name: string;
   avatar?: string;
   type: 'guide' | 'support' | 'traveler';
-  user_id: string; // ✅ required for Laravel endpoint
+  user_id: string;
 }
 
 interface ChatWindowProps {
@@ -73,7 +73,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData, onClose }) =>
   const markMessagesAsRead = async () => {
     try {
       await axios.post(
-        `http://127.0.0.1:8000/api/messages/mark-read`, // if you implement it
+        `http://127.0.0.1:8000/api/messages/mark-read`,
         { sender_id: chatData.user_id },
         {
           headers: {
@@ -158,13 +158,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData, onClose }) =>
           )}
           <div>
             <h3 className="font-semibold">{chatData.name}</h3>
-            <span className="text-sm text-green-500">Online</span>
+            {/* <span className="text-sm text-green-500">Online</span> */}
           </div>
         </div>
         <div className="flex items-center space-x-4">
-          <Phone className="h-5 w-5 text-gray-600" />
-          <Video className="h-5 w-5 text-gray-600" />
-          <MoreVertical className="h-5 w-5 text-gray-600" />
+          {/* <Phone className="h-5 w-5 text-gray-600" />
+          <Video className="h-5 w-5 text-gray-600" /> */}
+          {/* <MoreVertical className="h-5 w-5 text-gray-600" /> */}
         </div>
       </div>
 
@@ -173,11 +173,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData, onClose }) =>
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`flex ${message.sender_id === user.id ? 'justify-end' : 'justify-start'}`}
+            className={`flex ${String(message.sender_id) === String(user.id) ? 'justify-end' : 'justify-start'}`}
           >
             <div
               className={`max-w-[70%] rounded-lg p-3 ${
-                message.sender_id === user.id
+                String(message.sender_id) === String(user.id)
                   ? 'bg-purple-600 text-white'
                   : 'bg-gray-100 text-gray-800'
               }`}
@@ -185,7 +185,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData, onClose }) =>
               <p className="text-sm">{message.content}</p>
               <span
                 className={`text-xs mt-1 block ${
-                  message.sender_id === user.id ? 'text-purple-200' : 'text-gray-500'
+                  String(message.sender_id) === String(user.id) ? 'text-purple-200' : 'text-gray-500'
                 }`}
               >
                 {new Date(message.created_at).toLocaleTimeString([], {
