@@ -33,18 +33,28 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData }) => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // Scroll to bottom helper
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
+  // Scroll only if user is near bottom
   useEffect(() => {
-    scrollToBottom();
+    if (messagesContainerRef.current) {
+      const container = messagesContainerRef.current;
+      const nearBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+
+      if (nearBottom) {
+        scrollToBottom('auto');
+      }
+    }
   }, [messages]);
 
   useEffect(() => {
     if (user && chatData?.user_id) {
-      console.log('👤 Current user:', user);
       fetchMessages();
     }
   }, [chatId, user]);
@@ -59,10 +69,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData }) => {
           },
         }
       );
-      console.log('✅ Messages:', response.data);
       setMessages(response.data);
+      setTimeout(() => scrollToBottom('auto'), 100);
     } catch (err) {
-      console.error('❌ Failed to load messages:', err);
+      console.error('Failed to load messages:', err);
       setError('Failed to load messages');
     } finally {
       setLoading(false);
@@ -88,6 +98,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData }) => {
 
       setMessages((prev) => [...prev, response.data]);
       setNewMessage('');
+      scrollToBottom();
     } catch (err) {
       console.error(err);
       setError('Failed to send message');
@@ -101,20 +112,20 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData }) => {
     }
   };
 
-  // Extract numeric ID from UUID like '00000000-0000-0000-0000-000000000001' -> '1'
+  // Extract numeric ID from UUID (e.g., '00000000-0000-0000-0000-000000000001' -> '1')
   const extractNumericId = (uuid: string): string => {
     return uuid.slice(-12).replace(/^0+/, '') ?? '';
   };
 
-  // Determine if this message was sent by the logged-in user
+  // True if message is from the current user
   const isOwnMessage = (senderId: string | number): boolean => {
-    const userId = extractNumericId(user?.id || '');
-    return String(senderId) === userId;
+    const currentUserId = extractNumericId(user?.id || '');
+    return String(senderId) === currentUserId;
   };
 
   if (!user) {
     return (
-      <div className="flex-1 bg-white rounded-xl shadow-sm p-6">
+      <div className="flex-1 bg-white rounded-xl shadow-sm p-6 flex items-center justify-center">
         <p className="text-center text-gray-600">Please log in to view messages</p>
       </div>
     );
@@ -122,9 +133,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData }) => {
 
   if (loading) {
     return (
-      <div className="flex-1 bg-white rounded-xl shadow-sm p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+      <div className="flex-1 bg-white rounded-xl shadow-sm p-6 flex items-center justify-center">
+        <div className="animate-pulse space-y-4 w-full max-w-md">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mx-auto"></div>
           <div className="space-y-2">
             <div className="h-4 bg-gray-200 rounded w-3/4"></div>
             <div className="h-4 bg-gray-200 rounded w-1/2"></div>
@@ -135,9 +146,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData }) => {
   }
 
   return (
-    <div className="flex-1 bg-white rounded-xl shadow-sm flex flex-col">
+    <div className="flex-1 bg-white rounded-xl shadow-sm flex flex-col max-h-[calc(100vh-200px)]">
       {/* Chat Header */}
-      <div className="p-4 border-b flex items-center justify-between">
+      <div className="p-4 border-b flex items-center justify-between flex-shrink-0">
         <div className="flex items-center space-x-3">
           {chatData.avatar ? (
             <img
@@ -152,12 +163,16 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData }) => {
           )}
           <div>
             <h3 className="font-semibold">{chatData.name}</h3>
+            <p className="text-xs text-gray-500 capitalize">{chatData.type}</p>
           </div>
         </div>
       </div>
 
       {/* Message List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div 
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto p-4 space-y-4"
+      >
         {messages.map((message) => {
           const own = isOwnMessage(message.sender_id);
           return (
@@ -166,13 +181,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData }) => {
               className={`flex ${own ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[70%] rounded-lg p-3 ${
+                className={`max-w-[75%] rounded-lg p-3 ${
                   own ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-800'
                 }`}
               >
-                <p className="text-sm">{message.content}</p>
+                <p className="text-sm break-words">{message.content}</p>
                 <span
-                  className={`text-xs mt-1 block ${
+                  className={`text-xs mt-1 block text-right ${
                     own ? 'text-purple-200' : 'text-gray-500'
                   }`}
                 >
@@ -189,7 +204,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData }) => {
       </div>
 
       {/* Input area */}
-      <div className="p-4 border-t">
+      <div className="p-4 border-t flex-shrink-0">
+        {error && (
+          <div className="text-red-500 text-sm mb-2 text-center">{error}</div>
+        )}
         <div className="flex items-end space-x-4">
           <div className="flex-1 bg-gray-100 rounded-lg p-2">
             <textarea
@@ -204,7 +222,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData }) => {
           <button
             onClick={handleSend}
             disabled={!newMessage.trim()}
-            className="bg-purple-600 text-white p-3 rounded-lg hover:bg-purple-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+            className="bg-purple-600 text-white p-3 rounded-lg hover:bg-purple-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex-shrink-0"
           >
             <Send className="h-5 w-5" />
           </button>
