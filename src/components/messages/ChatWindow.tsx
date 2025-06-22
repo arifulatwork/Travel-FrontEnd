@@ -1,15 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import {
-  Phone, Video, MoreVertical, Send, Image, Paperclip, Smile
-} from 'lucide-react';
+import { Send } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface Message {
   id: number | string;
   content: string;
-  sender_id: string;
-  receiver_id: string;
+  sender_id: string | number;
+  receiver_id: string | number;
   created_at: string;
   read: boolean;
 }
@@ -28,7 +26,7 @@ interface ChatWindowProps {
   onClose: () => void;
 }
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData, onClose }) => {
+const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData }) => {
   const { user } = useAuth();
   const [newMessage, setNewMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -46,8 +44,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData, onClose }) =>
 
   useEffect(() => {
     if (user && chatData?.user_id) {
+      console.log('👤 Current user:', user);
       fetchMessages();
-      markMessagesAsRead();
     }
   }, [chatId, user]);
 
@@ -61,28 +59,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData, onClose }) =>
           },
         }
       );
+      console.log('✅ Messages:', response.data);
       setMessages(response.data);
     } catch (err) {
-      console.error(err);
+      console.error('❌ Failed to load messages:', err);
       setError('Failed to load messages');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const markMessagesAsRead = async () => {
-    try {
-      await axios.post(
-        `http://127.0.0.1:8000/api/messages/mark-read`,
-        { sender_id: chatData.user_id },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
-      );
-    } catch (err) {
-      console.warn('Failed to mark messages as read');
     }
   };
 
@@ -116,6 +99,17 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData, onClose }) =>
       e.preventDefault();
       handleSend();
     }
+  };
+
+  // Extract numeric ID from UUID like '00000000-0000-0000-0000-000000000001' -> '1'
+  const extractNumericId = (uuid: string): string => {
+    return uuid.slice(-12).replace(/^0+/, '') ?? '';
+  };
+
+  // Determine if this message was sent by the logged-in user
+  const isOwnMessage = (senderId: string | number): boolean => {
+    const userId = extractNumericId(user?.id || '');
+    return String(senderId) === userId;
   };
 
   if (!user) {
@@ -158,44 +152,39 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData, onClose }) =>
           )}
           <div>
             <h3 className="font-semibold">{chatData.name}</h3>
-            {/* <span className="text-sm text-green-500">Online</span> */}
           </div>
-        </div>
-        <div className="flex items-center space-x-4">
-          {/* <Phone className="h-5 w-5 text-gray-600" />
-          <Video className="h-5 w-5 text-gray-600" /> */}
-          {/* <MoreVertical className="h-5 w-5 text-gray-600" /> */}
         </div>
       </div>
 
       {/* Message List */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex ${String(message.sender_id) === String(user.id) ? 'justify-end' : 'justify-start'}`}
-          >
+        {messages.map((message) => {
+          const own = isOwnMessage(message.sender_id);
+          return (
             <div
-              className={`max-w-[70%] rounded-lg p-3 ${
-                String(message.sender_id) === String(user.id)
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-gray-100 text-gray-800'
-              }`}
+              key={message.id}
+              className={`flex ${own ? 'justify-end' : 'justify-start'}`}
             >
-              <p className="text-sm">{message.content}</p>
-              <span
-                className={`text-xs mt-1 block ${
-                  String(message.sender_id) === String(user.id) ? 'text-purple-200' : 'text-gray-500'
+              <div
+                className={`max-w-[70%] rounded-lg p-3 ${
+                  own ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-800'
                 }`}
               >
-                {new Date(message.created_at).toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </span>
+                <p className="text-sm">{message.content}</p>
+                <span
+                  className={`text-xs mt-1 block ${
+                    own ? 'text-purple-200' : 'text-gray-500'
+                  }`}
+                >
+                  {new Date(message.created_at).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         <div ref={messagesEndRef} />
       </div>
 
@@ -211,13 +200,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, chatData, onClose }) =>
               className="w-full bg-transparent resize-none focus:outline-none min-h-[40px] max-h-32"
               rows={1}
             />
-            <div className="flex items-center justify-between pt-2 border-t border-gray-200">
-              <div className="flex space-x-2">
-                {/* <Image className="h-5 w-5 text-gray-600" />
-                <Paperclip className="h-5 w-5 text-gray-600" />
-                <Smile className="h-5 w-5 text-gray-600" /> */}
-              </div>
-            </div>
           </div>
           <button
             onClick={handleSend}
