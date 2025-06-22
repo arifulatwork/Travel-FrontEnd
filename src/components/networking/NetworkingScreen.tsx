@@ -257,7 +257,7 @@ const NetworkingScreen: React.FC = () => {
 
       <div className="mb-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold">Messages</h2>
+          <h2 className="text-2xl font-bold">Networking</h2>
           <button
             onClick={() => setShowInviteModal(true)}
             className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
@@ -277,7 +277,7 @@ const NetworkingScreen: React.FC = () => {
               : 'text-gray-600 hover:text-gray-900'
           }`}
         >
-          Messages
+          Networking
         </button>
         <button
           onClick={() => setActiveTab('meetings')}
