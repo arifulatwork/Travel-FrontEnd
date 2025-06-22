@@ -294,76 +294,77 @@ const NetworkingScreen: React.FC = () => {
 
       {activeTab === 'buddies' ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-1 bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className="p-4 border-b">
-              <div className="relative">
-                <Search className="absolute left-3 top-2.5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search buddies..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
+  {/* Left sidebar - Networking list */}
+  <div className="md:col-span-1 bg-white rounded-xl shadow-sm overflow-hidden flex flex-col">
+    <div className="p-4 border-b">
+      <div className="relative">
+        <Search className="absolute left-3 top-2.5 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Search buddies..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full pl-10 pr-4 py-2 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+        />
+      </div>
+      <div className="mt-4">
+        <select
+          value={selectedLocation}
+          onChange={(e) => setSelectedLocation(e.target.value)}
+          className="w-full p-2 bg-gray-50 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+        >
+          <option value="">All Locations</option>
+          {locations.map(location => (
+            <option key={location} value={location}>{location}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+    <div className="divide-y overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+      {filteredBuddies.map(buddy => (
+        <div key={buddy.id} className="p-4 hover:bg-gray-50">
+          <div className="flex items-center space-x-4">
+            {buddy.avatar ? (
+              <img
+                src={buddy.avatar}
+                alt={buddy.name}
+                className="w-12 h-12 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                <Users className="h-6 w-6 text-purple-600" />
               </div>
-              <div className="mt-4">
-                <select
-                  value={selectedLocation}
-                  onChange={(e) => setSelectedLocation(e.target.value)}
-                  className="w-full p-2 bg-gray-50 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                >
-                  <option value="">All Locations</option>
-                  {locations.map(location => (
-                    <option key={location} value={location}>{location}</option>
-                  ))}
-                </select>
+            )}
+            <div className="flex-1 min-w-0">
+              <h4 className="font-medium text-gray-900 truncate">{buddy.name}</h4>
+              <div className="flex items-center text-sm text-gray-500">
+                <MapPin className="h-4 w-4 mr-1" />
+                {buddy.location}
               </div>
             </div>
-            <div className="divide-y">
-              {filteredBuddies.map(buddy => (
-                <div key={buddy.id} className="p-4 hover:bg-gray-50">
-                  <div className="flex items-center space-x-4">
-                    {buddy.avatar ? (
-                      <img
-                        src={buddy.avatar}
-                        alt={buddy.name}
-                        className="w-12 h-12 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                        <Users className="h-6 w-6 text-purple-600" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-gray-900 truncate">{buddy.name}</h4>
-                      <div className="flex items-center text-sm text-gray-500">
-                        <MapPin className="h-4 w-4 mr-1" />
-                        {buddy.location}
-                      </div>
-                    </div>
-                    {buddy.connectionStatus === 'none' && (
-                      <button
-                        onClick={() => handleConnect(buddy)}
-                        className="flex items-center gap-1 text-purple-600 hover:text-purple-700"
-                      >
-                        <UserPlus className="h-4 w-4" />
-                        Connect
-                      </button>
-                    )}
-                    {buddy.connectionStatus === 'pending' && (
-                      <span className="text-orange-600 text-sm">Pending</span>
-                    )}
-                    {buddy.connectionStatus === 'connected' && (
-                      <button className="flex items-center gap-1 text-purple-600 hover:text-purple-700">
-                        <MessageCircle className="h-4 w-4" />
-                        Message
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+            {buddy.connectionStatus === 'none' && (
+              <button
+                onClick={() => handleConnect(buddy)}
+                className="flex items-center gap-1 text-purple-600 hover:text-purple-700"
+              >
+                <UserPlus className="h-4 w-4" />
+                Connect
+              </button>
+            )}
+            {buddy.connectionStatus === 'pending' && (
+              <span className="text-orange-600 text-sm">Pending</span>
+            )}
+            {buddy.connectionStatus === 'connected' && (
+              <button className="flex items-center gap-1 text-purple-600 hover:text-purple-700">
+                <MessageCircle className="h-4 w-4" />
+                Message
+              </button>
+            )}
           </div>
+        </div>
+      ))}
+    </div>
+  </div>
           <div className="md:col-span-2 bg-white rounded-xl shadow-sm p-6">
             <div className="text-center py-12">
               <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
