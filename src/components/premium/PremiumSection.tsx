@@ -70,7 +70,6 @@ const PremiumSection: React.FC = () => {
   const [selectedPropertyType, setSelectedPropertyType] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   
-  // State for all data with loading and error states
   const [benefits, setBenefits] = useState<any[]>([]);
   const [pricingTiers, setPricingTiers] = useState<PricingTier[]>([]);
   const [premiumDiscounts, setPremiumDiscounts] = useState<SpecialDiscount[]>([]);
@@ -93,7 +92,6 @@ const PremiumSection: React.FC = () => {
       });
       setError(null);
 
-      // Fetch all data in parallel
       const [benefitsRes, pricingRes, discountsRes, propertiesRes] = await Promise.all([
         fetch('http://127.0.0.1:8000/api/premium/benefits'),
         fetch(`http://127.0.0.1:8000/api/premium/tiers?type=${activeTab}`),
@@ -101,18 +99,15 @@ const PremiumSection: React.FC = () => {
         fetch('http://127.0.0.1:8000/api/premium/properties')
       ]);
 
-      // Check for errors
       if (!benefitsRes.ok || !pricingRes.ok || !discountsRes.ok || !propertiesRes.ok) {
         throw new Error('Failed to fetch data');
       }
 
-      // Parse responses
       const benefitsData: ApiResponse<any> = await benefitsRes.json();
       const pricingData: ApiResponse<PricingTier> = await pricingRes.json();
       const discountsData: ApiResponse<SpecialDiscount> = await discountsRes.json();
       const propertiesData: ApiResponse<RealEstateProperty> = await propertiesRes.json();
 
-      // Update state
       setBenefits(benefitsData.data.benefits || []);
       setPricingTiers(pricingData.data.tiers || []);
       setPremiumDiscounts(discountsData.data.discounts || []);
@@ -140,6 +135,10 @@ const PremiumSection: React.FC = () => {
   };
 
   const handleSubscribe = (tier: PricingTier) => {
+    if (!tier?.id) {
+      alert('Invalid subscription tier');
+      return;
+    }
     setSelectedTier(tier);
     setShowPaymentModal(true);
   };
@@ -164,35 +163,73 @@ const PremiumSection: React.FC = () => {
     }
 
     try {
+      // Process payment
       const res = await fetch('http://127.0.0.1:8000/api/auth/payments/charge', {
         method: 'POST',
         headers: {
-  'Content-Type': 'application/json',
-  'Accept': 'application/json',
-  'Authorization': `Bearer ${localStorage.getItem('token')}` // 👈 this must be valid
-},
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
         body: JSON.stringify({
-        token: token.id,
-        amount: selectedTier.price * 100,
-        purpose: 'premium',
-        tier_id: selectedTier.id
-      })
-
+          token: token.id,
+          amount: selectedTier.price,
+          purpose: 'premium',
+          tier_id: selectedTier.id
+        })
       });
 
       const result = await res.json();
+      console.log('💳 Payment result:', result);
       
       if (!res.ok) {
         throw new Error(result.message || 'Payment failed');
       }
 
+      // Validate required fields
+      if (!result.payment_id || !result.charge_id) {
+        alert("Subscription failed: Missing payment or charge ID.");
+        setIsProcessing(false);
+        return;
+      }
+
+      if (!selectedTier?.id) {
+        alert("Subscription failed: Missing tier information.");
+        setIsProcessing(false);
+        return;
+      }
+
+      // Create subscription
+      const subscriptionPayload = {
+        payment_id: result.payment_id,
+        gateway_subscription_id: result.charge_id,
+        premium_tier_id: selectedTier.id
+      };
+      
+      console.log("📦 Subscription payload:", subscriptionPayload);
+
+      const subscriptionRes = await fetch('http://127.0.0.1:8000/api/auth/subscriptions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(subscriptionPayload)
+      });
+
+      if (!subscriptionRes.ok) {
+        const subscriptionError = await subscriptionRes.json();
+        throw new Error(subscriptionError.message || 'Subscription creation failed');
+      }
+
       alert('Payment successful! Premium benefits are now active.');
       setShowPaymentModal(false);
       setSelectedTier(null);
-      // Optionally refresh data to show new premium status
       fetchData();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Payment failed');
+      console.error('Payment error:', err);
     } finally {
       setIsProcessing(false);
     }
