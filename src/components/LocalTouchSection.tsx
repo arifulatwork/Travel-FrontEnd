@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Star, Clock, MapPin, Heart, Music, Utensils, Palette, X, Info, Check, CreditCard, ChevronDown, Sun, Moon, Award, Leaf, Wine, Sparkles } from 'lucide-react';
+import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js';
 
 interface Experience {
   id: number;
   type: 'food' | 'music' | 'craft';
   name: string;
   description: string;
-  price: number; // Changed from string to number
+  price: number;
   rating: number;
   reviews: number;
   location: string;
@@ -36,6 +37,9 @@ interface BookingDetails {
 }
 
 const LocalTouchSection: React.FC = () => {
+  const stripe = useStripe();
+  const elements = useElements();
+  
   const [selectedType, setSelectedType] = useState<'food' | 'music' | 'craft' | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [selectedExperience, setSelectedExperience] = useState<Experience | null>(null);
@@ -51,6 +55,7 @@ const LocalTouchSection: React.FC = () => {
   const [experiences, setExperiences] = useState<Experience[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
 
   // Fetch experiences from API
   useEffect(() => {
@@ -62,7 +67,6 @@ const LocalTouchSection: React.FC = () => {
         }
         const data = await response.json();
         
-        // Process the data to ensure consistent types
         const processedData = data.map((exp: any) => {
           const host = typeof exp.host === 'string' ? JSON.parse(exp.host) : exp.host;
           const highlights = typeof exp.highlights === 'string' ? JSON.parse(exp.highlights) : exp.highlights;
@@ -101,30 +105,67 @@ const LocalTouchSection: React.FC = () => {
     (!selectedCity || exp.city === selectedCity)
   );
 
-  const handleBookingSubmit = (e: React.FormEvent) => {
+  const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Booking submitted:', {
-      experience: selectedExperience,
-      ...bookingDetails
-    });
-    setBookingConfirmed(true);
-    setShowPaymentButton(true);
+
+    if (!selectedExperience) return;
+
+    try {
+      const res = await fetch('http://localhost:8000/api/auth/localtouch/book', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({
+          experience_id: selectedExperience.id,
+          ...bookingDetails,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setClientSecret(data.client_secret);
+        setBookingConfirmed(true);
+        setShowPaymentButton(true);
+      } else {
+        alert(data.message || 'Booking failed');
+      }
+    } catch (err) {
+      alert('Failed to book. Please try again.');
+    }
   };
 
-  const handlePayment = () => {
-    console.log('Processing payment...');
-    setTimeout(() => {
+  const handlePayment = async () => {
+    if (!stripe || !elements || !clientSecret) return;
+
+    const card = elements.getElement(CardElement);
+    if (!card) return;
+
+    const result = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: {
+        card,
+      },
+    });
+
+    if (result.error) {
+      alert(result.error.message);
+    } else if (result.paymentIntent?.status === 'succeeded') {
+      alert('✅ Payment successful!');
+      // Reset UI
       setShowBookingModal(false);
       setBookingConfirmed(false);
       setSelectedExperience(null);
       setShowPaymentButton(false);
+      setClientSecret(null);
       setBookingDetails({
         date: '',
         time: '',
         participants: 1,
         specialRequests: ''
       });
-    }, 2000);
+    }
   };
 
   // Get icon component by name
@@ -341,7 +382,7 @@ const LocalTouchSection: React.FC = () => {
             </div>
 
             {bookingConfirmed ? (
-              <div className="text-center py-8">
+              <div className="text-center py-4">
                 <div className="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Check className="h-8 w-8 text-green-600 dark:text-green-400" />
                 </div>
@@ -349,14 +390,32 @@ const LocalTouchSection: React.FC = () => {
                 <p className="text-gray-600 dark:text-gray-400 mb-6">
                   Your experience has been successfully booked. Please proceed with payment to secure your spot.
                 </p>
+                
                 {showPaymentButton && (
-                  <button
-                    onClick={handlePayment}
-                    className="flex items-center justify-center w-full gap-2 bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors"
-                  >
-                    <CreditCard className="h-5 w-5" />
-                    Pay Now €{(selectedExperience.price * bookingDetails.participants).toFixed(2)}
-                  </button>
+                  <div className="space-y-4">
+                    <div className="bg-white dark:bg-gray-700 p-3 rounded-lg border dark:border-gray-600">
+                      <CardElement options={{ 
+                        style: { 
+                          base: { 
+                            fontSize: '16px', 
+                            color: '#333',
+                            '::placeholder': {
+                              color: '#a0aec0',
+                            },
+                          },
+                        } 
+                      }} />
+                    </div>
+
+                    <button
+                      onClick={handlePayment}
+                      disabled={!stripe}
+                      className="flex items-center justify-center w-full gap-2 bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                    >
+                      <CreditCard className="h-5 w-5" />
+                      Pay Now €{(selectedExperience.price * bookingDetails.participants).toFixed(2)}
+                    </button>
+                  </div>
                 )}
               </div>
             ) : (
