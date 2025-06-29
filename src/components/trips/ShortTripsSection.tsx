@@ -24,7 +24,7 @@ interface Trip {
   image_url: string;
   duration_days: number;
   max_participants: number | null;
-  highlights: string;
+  highlights: { item: string }[];
   category: {
     id: number;
     name: string;
@@ -55,6 +55,9 @@ const iconMap: Record<string, React.ComponentType<any>> = {
   dance: Dance
 };
 
+const BASE_URL = 'http://127.0.0.1:8000';
+const STORAGE_PATH = 'storage';
+
 const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({ 
   maxPrice, 
   selectedType, 
@@ -67,6 +70,31 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const processImageUrl = (url: string): string => {
+    if (!url) return '';
+    
+    // If already a full URL, return as-is
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    
+    // Handle cases where URL might start with 'trip-images/' or 'storage/trip-images/'
+    if (url.startsWith('trip-images/')) {
+      return `${BASE_URL}/${STORAGE_PATH}/${url}`;
+    }
+    
+    if (url.startsWith('storage/trip-images/')) {
+      return `${BASE_URL}/${url}`;
+    }
+    
+    if (url.startsWith('storage/')) {
+      return `${BASE_URL}/${url}`;
+    }
+    
+    // Default case - prepend base URL and storage path
+    return `${BASE_URL}/${STORAGE_PATH}/trip-images/${url}`;
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -74,13 +102,20 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
         setError(null);
         
         // Fetch trips
-        const tripsResponse = await fetch('http://127.0.0.1:8000/api/trips');
+        const tripsResponse = await fetch(`${BASE_URL}/api/trips`);
         if (!tripsResponse.ok) throw new Error('Failed to fetch trips');
         const tripsData = await tripsResponse.json();
-        setTrips(tripsData.data || []);
+        
+        // Process image URLs to ensure they're complete
+        const processedTrips = tripsData.data.map((trip: Trip) => ({
+          ...trip,
+          image_url: processImageUrl(trip.image_url)
+        }));
+        
+        setTrips(processedTrips || []);
 
         // Fetch categories
-        const categoriesResponse = await fetch('http://127.0.0.1:8000/api/trip-categories');
+        const categoriesResponse = await fetch(`${BASE_URL}/api/trip-categories`);
         if (!categoriesResponse.ok) throw new Error('Failed to fetch categories');
         const categoriesData = await categoriesResponse.json();
         setCategories(categoriesData || []);
@@ -154,7 +189,7 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
           originalPrice={parseFloat(trip.original_price)}
           discountPercentage={trip.discount_percentage}
           image={trip.image_url}
-          highlights={trip.highlights ? JSON.parse(trip.highlights) : []}
+          highlights={trip.highlights || []}
           maxParticipants={trip.max_participants || 0}
           onBook={() => handleBook(trip.slug)}
         />
@@ -198,9 +233,11 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredTrips.map(trip => (
           <div key={trip.slug} className="relative">
-            <div className="absolute top-4 right-4 z-10 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium">
-              {trip.discount_percentage}% OFF
-            </div>
+            {trip.discount_percentage > 0 && (
+              <div className="absolute top-4 right-4 z-10 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+                {trip.discount_percentage}% OFF
+              </div>
+            )}
             <TripCard
               id={trip.slug}
               type={trip.category.slug}
