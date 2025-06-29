@@ -27,6 +27,7 @@ interface Experience {
     title: string;
     description: string;
   }[];
+  user_has_booking?: boolean; // ✅ Added new field
 }
 
 interface BookingDetails {
@@ -61,7 +62,17 @@ const LocalTouchSection: React.FC = () => {
   useEffect(() => {
     const fetchExperiences = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/experiences');
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('Authentication required');
+        }
+
+        const response = await fetch('http://localhost:8000/api/auth/localtouch/experiences', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
         if (!response.ok) {
           throw new Error('Failed to fetch experiences');
         }
@@ -81,7 +92,8 @@ const LocalTouchSection: React.FC = () => {
               reviews: typeof host.reviews === 'string' ? parseInt(host.reviews) : host.reviews
             },
             highlights,
-            why_choose
+            why_choose,
+            user_has_booking: exp.user_has_booking || false // ✅ Added processing for new field
           };
         });
         
@@ -165,6 +177,8 @@ const LocalTouchSection: React.FC = () => {
         participants: 1,
         specialRequests: ''
       });
+      // Refresh experiences to update booking status
+      window.location.reload();
     }
   };
 
@@ -345,15 +359,24 @@ const LocalTouchSection: React.FC = () => {
                           <p className="text-lg font-semibold dark:text-white">€{experience.price.toFixed(2)}</p>
                           <p className="text-sm text-gray-500 dark:text-gray-400">per person</p>
                         </div>
-                        <button
-                          onClick={() => {
-                            setSelectedExperience(experience);
-                            setShowBookingModal(true);
-                          }}
-                          className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
-                        >
-                          Book Now
-                        </button>
+                        {experience.user_has_booking ? (
+                          <button
+                            className="bg-gray-400 text-white px-4 py-2 rounded-lg cursor-not-allowed"
+                            disabled
+                          >
+                            View Details
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setSelectedExperience(experience);
+                              setShowBookingModal(true);
+                            }}
+                            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                          >
+                            Book Now
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
