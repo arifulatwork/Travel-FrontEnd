@@ -21,13 +21,13 @@ interface Experience {
     reviews: number;
     image: string | null;
   };
-  highlights: string[];
+  highlights: { value: string }[]; // ✅ Updated type
   why_choose: {
     icon: string;
     title: string;
     description: string;
   }[];
-  user_has_booking?: boolean; // ✅ Added new field
+  user_has_booking?: boolean;
 }
 
 interface BookingDetails {
@@ -80,6 +80,7 @@ const LocalTouchSection: React.FC = () => {
         
         const processedData = data.map((exp: any) => {
           const host = typeof exp.host === 'string' ? JSON.parse(exp.host) : exp.host;
+          // ✅ Maintain optional JSON parsing for highlights
           const highlights = typeof exp.highlights === 'string' ? JSON.parse(exp.highlights) : exp.highlights;
           const why_choose = typeof exp.why_choose === 'string' ? JSON.parse(exp.why_choose) : exp.why_choose;
           
@@ -93,7 +94,7 @@ const LocalTouchSection: React.FC = () => {
             },
             highlights,
             why_choose,
-            user_has_booking: exp.user_has_booking || false // ✅ Added processing for new field
+            user_has_booking: exp.user_has_booking || false
           };
         });
         
@@ -229,7 +230,7 @@ const LocalTouchSection: React.FC = () => {
         {experience.highlights?.map((highlight, index) => (
           <li key={index} className="flex items-start gap-2">
             <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
-            <span>{highlight}</span>
+            <span>{highlight.value}</span> {/* ✅ Updated to use highlight.value */}
           </li>
         ))}
       </ul>
