@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, MapPin, Users, Calendar, Tag, Percent } from 'lucide-react';
+import { Clock, MapPin, Users, Calendar, Tag } from 'lucide-react';
 
 interface Activity {
   time: string;
@@ -15,7 +15,7 @@ interface DayActivities {
 interface TripCardProps {
   title: string;
   description: string;
-  duration: string;
+  durationDays: number; // ← changed from string to number
   price: number;
   originalPrice?: number;
   discountPercentage?: number;
@@ -35,7 +35,7 @@ interface TripCardProps {
 const TripCard: React.FC<TripCardProps> = ({
   title,
   description,
-  duration,
+  durationDays,
   price,
   originalPrice,
   image,
@@ -46,16 +46,17 @@ const TripCard: React.FC<TripCardProps> = ({
   specialOffer,
   onClick
 }) => {
-  // Get first few highlights to show as preview
   const previewHighlights = highlights
     .slice(0, 2)
     .map(item => {
       if ('day' in item) {
         return item.activities[0]?.activity || '';
       }
-      return ('activity' in item) ? item.activity : '';
+      return 'activity' in item ? item.activity : '';
     })
     .filter(Boolean);
+
+  const durationText = durationDays === 1 ? '1 day' : `${durationDays} days`;
 
   return (
     <div 
@@ -92,7 +93,7 @@ const TripCard: React.FC<TripCardProps> = ({
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1">
               <Clock className="h-4 w-4" />
-              {duration}
+              {durationText}
             </span>
             <span className="flex items-center gap-1">
               <Users className="h-4 w-4" />
@@ -102,14 +103,14 @@ const TripCard: React.FC<TripCardProps> = ({
         </div>
 
         {meetingPoint && (
-          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
+          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-2">
             <MapPin className="h-4 w-4" />
             {meetingPoint}
           </div>
         )}
 
         {startTime && (
-          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
+          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-2">
             <Calendar className="h-4 w-4" />
             Starts at {startTime}
           </div>

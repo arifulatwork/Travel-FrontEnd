@@ -322,23 +322,24 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
           ← Back to All Trips
         </button>
         <TripDetails 
-          id={trip.slug}
-          type={trip.category.slug}
-          name={trip.title}
-          description={trip.description}
-          price={parseFloat(trip.price)}
-          originalPrice={parseFloat(trip.original_price)}
-          discountPercentage={trip.discount_percentage}
-          image={trip.image_url}
-          highlights={trip.highlights || []}
-          maxParticipants={trip.max_participants || 0}
-          learningOutcomes={trip.learning_outcomes || []}
-          personalDevelopment={trip.personal_development || []}
-          certifications={trip.certifications || []}
-          environmentalImpact={trip.environmental_impact || []}
-          communityBenefits={trip.community_benefits || []}
-          onBook={() => handleInitiateBooking(trip.slug)}
-        />
+        id={trip.slug}
+        type={trip.category.slug}
+        name={trip.title}
+        description={trip.description}
+        duration={trip.duration_days} // ✅ ADD THIS
+        price={parseFloat(trip.price)}
+        originalPrice={parseFloat(trip.original_price)}
+        discountPercentage={trip.discount_percentage}
+        image={trip.image_url}
+        highlights={trip.highlights || []}
+        maxParticipants={trip.max_participants || 0}
+        learningOutcomes={trip.learning_outcomes || []}
+        personalDevelopment={trip.personal_development || []}
+        certifications={trip.certifications || []}
+        environmentalImpact={trip.environmental_impact || []}
+        communityBenefits={trip.community_benefits || []}
+        onBook={() => handleInitiateBooking(trip.slug)}
+      />
 
         {/* Payment Modal */}
         {showPaymentForm && (
@@ -427,16 +428,21 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
               </div>
             )}
             <TripCard
-              id={trip.slug}
-              type={trip.category.slug}
-              name={trip.title}
-              description={trip.description}
-              price={parseFloat(trip.price)}
-              originalPrice={parseFloat(trip.original_price)}
-              discountPercentage={trip.discount_percentage}
-              image={trip.image_url}
-              onClick={() => setSelectedTrip(trip.slug)}
-            />
+  title={trip.title}
+  description={trip.description}
+  durationDays={trip.duration_days} // 👈 updated prop name
+  price={parseFloat(trip.price)}
+  originalPrice={parseFloat(trip.original_price)}
+  discountPercentage={trip.discount_percentage}
+  image={trip.image_url}
+  startTime={"09:00 AM"}
+  meetingPoint={"Beachside Entrance"}
+  maxParticipants={trip.max_participants || 0}
+  highlights={trip.highlights}
+  specialOffer={null} // or trip.specialOffer
+  onClick={() => setSelectedTrip(trip.slug)}
+/>
+
           </div>
         ))}
       </div>

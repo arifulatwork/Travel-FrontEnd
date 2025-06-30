@@ -15,7 +15,7 @@ interface DayActivities {
 interface TripDetailsProps {
   title: string;
   description: string;
-  duration: string;
+  duration: number; 
   price: number;
   originalPrice?: number;
   image: string;
@@ -91,7 +91,7 @@ const TripDetails: React.FC<TripDetailsProps> = ({
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
               <Clock className="h-5 w-5 text-purple-600" />
-              <span>Duration: {duration}</span>
+              <span>Duration: {duration} {duration === 1 ? 'day' : 'days'}</span>
             </div>
             {startTime && endTime && (
               <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
