@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, MapPin, Users, CreditCard, Info, Sun, Moon, Coffee, Music, Utensils, Palette, Search, X, Check, Star } from 'lucide-react';
 import LocationMap from './maps/LocationMap';
+import { Elements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
+import AttractionPaymentModal from './AttractionPaymentModal';
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_yourKeyHere');
 
 interface Coordinates {
   lat: number;
@@ -23,6 +28,7 @@ interface Guide {
 }
 
 interface Attraction {
+  id: number;
   name: string;
   type: string;
   duration: string;
@@ -60,6 +66,10 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
 }) => {
   const [groupSize, setGroupSize] = useState<number>(0);
   const [showGroupSizeError, setShowGroupSizeError] = useState(false);
+  const [selectedAttraction, setSelectedAttraction] = useState<Attraction | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [bookingId, setBookingId] = useState<number | null>(null);
+  const [showPayment, setShowPayment] = useState(false);
 
   // Authentication check
   useEffect(() => {
@@ -95,7 +105,6 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
 
   const getImageUrl = (imagePath: string) => {
     const baseUrl = 'http://127.0.0.1:8000/storage/';
-    // Remove any leading slashes from the image path
     const cleanedPath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
     return baseUrl + cleanedPath;
   };
@@ -144,6 +153,43 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
       'Local traditions and customs',
       'Authentic cultural experience'
     ];
+  };
+
+  const handleBookNow = async (attraction: Attraction) => {
+    try {
+      const token = localStorage.getItem('token');
+      const participants = groupSize || 1;
+
+      // Step 1: Book
+      const res = await fetch(`http://127.0.0.1:8000/api/auth/attraction/book/${attraction.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ participants }),
+      });
+      const bookingData = await res.json();
+      setBookingId(bookingData.booking_id);
+
+      // Step 2: Create Stripe payment intent
+      const paymentRes = await fetch(`http://127.0.0.1:8000/api/auth/attraction/payment/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ booking_id: bookingData.booking_id }),
+      });
+      const paymentData = await paymentRes.json();
+      setClientSecret(paymentData.clientSecret);
+
+      // Show Stripe payment modal
+      setSelectedAttraction(attraction);
+      setShowPayment(true);
+    } catch (error) {
+      console.error('Booking or payment error:', error);
+    }
   };
 
   const filteredAttractions = attractions.filter(attraction => 
@@ -293,6 +339,7 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
                     )}
                   </span>
                   <button 
+                    onClick={() => handleBookNow(attraction)}
                     className={`px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 ${
                       visitType === 'group' && (!groupSize || groupSize < minGroupSize || groupSize > maxGroupSize)
                         ? 'opacity-50 cursor-not-allowed'
@@ -311,6 +358,17 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
         <div className="bg-yellow-50 p-6 rounded-xl text-center">
           <p className="text-yellow-700">No activities found within the selected price range.</p>
         </div>
+      )}
+
+      {/* Stripe Payment Modal */}
+      {showPayment && clientSecret && (
+        <Elements stripe={stripePromise} options={{ clientSecret }}>
+          <AttractionPaymentModal
+            clientSecret={clientSecret}
+            bookingId={bookingId}
+            onClose={() => setShowPayment(false)}
+          />
+        </Elements>
       )}
     </div>
   );
