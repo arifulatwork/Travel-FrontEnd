@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { MapPin, Gift } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -22,6 +22,25 @@ const DestinationCard: React.FC<DestinationCardProps> = ({
   onViewDetails,
   metadata
 }) => {
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('http://127.0.0.1:8000/api/auth/user', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await res.json();
+        console.log('✅ Authenticated user (DestinationCard):', data);
+      } catch (err) {
+        console.error('❌ Error fetching user in DestinationCard:', err);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
   // Prepend the base URL to the image path
   const getFullImageUrl = (imgPath: string) => {
     const baseUrl = 'http://127.0.0.1:8000/storage/';

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, MapPin, Users, CreditCard, Info, Sun, Moon, Coffee, Music, Utensils, Palette, Search, X, Check, Star } from 'lucide-react';
 import LocationMap from './maps/LocationMap';
 
@@ -60,6 +60,26 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
 }) => {
   const [groupSize, setGroupSize] = useState<number>(0);
   const [showGroupSizeError, setShowGroupSizeError] = useState(false);
+
+  // Authentication check
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('http://127.0.0.1:8000/api/auth/user', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await res.json();
+        console.log('✅ Authenticated user (DestinationDetails):', data);
+      } catch (err) {
+        console.error('❌ Error fetching user in DestinationDetails:', err);
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   const minGroupSize = Math.min(...attractions.map(a => a.minGroupSize || 0));
   const maxGroupSize = Math.max(...attractions.map(a => a.maxGroupSize || 0));
