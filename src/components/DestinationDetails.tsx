@@ -73,6 +73,13 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
     }
   };
 
+  const getImageUrl = (imagePath: string) => {
+    const baseUrl = 'http://127.0.0.1:8000/storage/';
+    // Remove any leading slashes from the image path
+    const cleanedPath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
+    return baseUrl + cleanedPath;
+  };
+
   const getDefaultHighlights = (attractionName: string, type: string) => {
     if (attractionName.toLowerCase().includes('sagrada familia')) {
       return [
@@ -195,7 +202,7 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
             {filteredAttractions.map((attraction, index) => (
               <div key={index} className="bg-gray-50 rounded-lg p-4">
                 <img
-                  src={attraction.image}
+                  src={getImageUrl(attraction.image)}
                   alt={attraction.name}
                   className="w-full h-48 object-cover rounded-lg mb-4"
                 />
@@ -216,7 +223,7 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
                     <div className="flex items-center space-x-2">
                       {attraction.guide.avatar ? (
                         <img 
-                          src={attraction.guide.avatar} 
+                          src={getImageUrl(attraction.guide.avatar)} 
                           alt={attraction.guide.name}
                           className="w-8 h-8 rounded-full object-cover"
                         />

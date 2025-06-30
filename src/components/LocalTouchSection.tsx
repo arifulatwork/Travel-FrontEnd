@@ -201,6 +201,15 @@ const LocalTouchSection: React.FC = () => {
     return <Icon className="h-5 w-5 text-purple-600" />;
   };
 
+  // Function to construct proper image URL
+  const getImageUrl = (imagePath: string) => {
+    if (imagePath.startsWith('http')) {
+      return imagePath;
+    }
+    // Add '/storage/' to the path if it's a local path
+    return `http://localhost:8000/storage/${imagePath}`;
+  };
+
   const renderWhyChoose = (experience: Experience) => (
     <div className="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
       <h4 className="font-medium text-sm flex items-center gap-2 text-purple-600 mb-3">
@@ -316,7 +325,7 @@ const LocalTouchSection: React.FC = () => {
                   <div key={experience.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
                     <div className="relative h-48">
                       <img
-                        src={experience.image.startsWith('http') ? experience.image : `http://localhost:8000/${experience.image}`}
+                        src={getImageUrl(experience.image)}
                         alt={experience.name}
                         className="w-full h-full object-cover"
                       />

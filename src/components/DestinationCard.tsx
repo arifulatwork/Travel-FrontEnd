@@ -22,11 +22,19 @@ const DestinationCard: React.FC<DestinationCardProps> = ({
   onViewDetails,
   metadata
 }) => {
+  // Prepend the base URL to the image path
+  const getFullImageUrl = (imgPath: string) => {
+    const baseUrl = 'http://127.0.0.1:8000/storage/';
+    // Remove any leading slashes from the image path to avoid double slashes
+    const cleanedPath = imgPath.replace(/^\//, '');
+    return `${baseUrl}${cleanedPath}`;
+  };
+
   return (
     <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       <div 
         className="h-48 bg-cover bg-center cursor-pointer"
-        style={{ backgroundImage: `url(${image})` }}
+        style={{ backgroundImage: `url(${getFullImageUrl(image)})` }}
         onClick={onViewDetails}
       >
         <div className="h-full w-full bg-gradient-to-b from-transparent to-black/30 p-4 flex flex-col justify-end">
