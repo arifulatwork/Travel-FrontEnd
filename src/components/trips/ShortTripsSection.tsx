@@ -74,6 +74,37 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  // First check authentication status
+  useEffect(() => {
+   const checkAuth = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No token found');
+
+    const res = await fetch(`${BASE_URL}/api/auth/user`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!res.ok) throw new Error('Not authenticated');
+    const user = await res.json();
+    console.log("✅ Authenticated user:", user);
+    setIsAuthenticated(true);
+  } catch (err) {
+    setIsAuthenticated(false);
+    console.error("❌ Authentication check failed:", err);
+  }
+};
+
+
+
+    checkAuth();
+  }, []);
 
   const processImageUrl = (url: string): string => {
     if (!url) return '';
@@ -97,41 +128,73 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
     return `${BASE_URL}/${STORAGE_PATH}/trip-images/${url}`;
   };
 
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const tripsResponse = await fetch(`${BASE_URL}/api/trips`, {
+        credentials: 'include',
+        headers: {
+          Accept: 'application/json'
+        }
+      });
+      
+      if (!tripsResponse.ok) throw new Error('Failed to fetch trips');
+      const tripsData = await tripsResponse.json();
+      
+      const processedTrips = tripsData.data.map((trip: Trip) => ({
+        ...trip,
+        image_url: processImageUrl(trip.image_url)
+      }));
+      
+      setTrips(processedTrips || []);
+
+      const categoriesResponse = await fetch(`${BASE_URL}/api/trip-categories`, {
+        credentials: 'include',
+        headers: {
+          Accept: 'application/json'
+        }
+      });
+      
+      if (!categoriesResponse.ok) throw new Error('Failed to fetch categories');
+      const categoriesData = await categoriesResponse.json();
+      setCategories(categoriesData || []);
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      console.error('Fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const tripsResponse = await fetch(`${BASE_URL}/api/trips`);
-        if (!tripsResponse.ok) throw new Error('Failed to fetch trips');
-        const tripsData = await tripsResponse.json();
-        
-        const processedTrips = tripsData.data.map((trip: Trip) => ({
-          ...trip,
-          image_url: processImageUrl(trip.image_url)
-        }));
-        
-        setTrips(processedTrips || []);
+    if (isAuthenticated === true) {
+      fetchData();
+    }
+  }, [isAuthenticated]);
 
-        const categoriesResponse = await fetch(`${BASE_URL}/api/trip-categories`);
-        if (!categoriesResponse.ok) throw new Error('Failed to fetch categories');
-        const categoriesData = await categoriesResponse.json();
-        setCategories(categoriesData || []);
+  const handleBook = async (tripSlug: string) => {
+    try {
+      const response = await fetch(`${BASE_URL}/api/trips/${tripSlug}/book`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        }
+      });
 
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An unknown error occurred');
-        console.error('Fetch error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  const handleBook = (tripSlug: string) => {
-    console.log('Booking trip:', tripSlug);
+      if (!response.ok) throw new Error('Booking failed');
+      
+      const data = await response.json();
+      console.log('Booking successful:', data);
+      alert('Trip booked successfully!');
+    } catch (err) {
+      console.error('Booking error:', err);
+      alert('Failed to book trip. Please try again.');
+    }
   };
 
   const filteredTrips = trips.filter(trip => {
@@ -145,6 +208,16 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
     
     return matchesCategory && matchesPrice && matchesSearch;
   });
+
+  if (isAuthenticated === false) {
+    return (
+      <div className="text-center py-12 bg-red-50 rounded-xl">
+        <Info className="h-12 w-12 text-red-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-red-900 mb-2">Authentication Required</h3>
+        <p className="text-red-600">Please log in to view trips</p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
