@@ -25,6 +25,11 @@ interface Trip {
   duration_days: number;
   max_participants: number | null;
   highlights: { item: string }[];
+  learning_outcomes?: { item: string }[];
+  personal_development?: { item: string }[];
+  certifications?: { item: string }[];
+  environmental_impact?: { item: string }[];
+  community_benefits?: { item: string }[];
   category: {
     id: number;
     name: string;
@@ -73,12 +78,10 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
   const processImageUrl = (url: string): string => {
     if (!url) return '';
     
-    // If already a full URL, return as-is
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return url;
     }
     
-    // Handle cases where URL might start with 'trip-images/' or 'storage/trip-images/'
     if (url.startsWith('trip-images/')) {
       return `${BASE_URL}/${STORAGE_PATH}/${url}`;
     }
@@ -91,7 +94,6 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
       return `${BASE_URL}/${url}`;
     }
     
-    // Default case - prepend base URL and storage path
     return `${BASE_URL}/${STORAGE_PATH}/trip-images/${url}`;
   };
 
@@ -101,12 +103,10 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
         setLoading(true);
         setError(null);
         
-        // Fetch trips
         const tripsResponse = await fetch(`${BASE_URL}/api/trips`);
         if (!tripsResponse.ok) throw new Error('Failed to fetch trips');
         const tripsData = await tripsResponse.json();
         
-        // Process image URLs to ensure they're complete
         const processedTrips = tripsData.data.map((trip: Trip) => ({
           ...trip,
           image_url: processImageUrl(trip.image_url)
@@ -114,7 +114,6 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
         
         setTrips(processedTrips || []);
 
-        // Fetch categories
         const categoriesResponse = await fetch(`${BASE_URL}/api/trip-categories`);
         if (!categoriesResponse.ok) throw new Error('Failed to fetch categories');
         const categoriesData = await categoriesResponse.json();
@@ -133,14 +132,11 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
 
   const handleBook = (tripSlug: string) => {
     console.log('Booking trip:', tripSlug);
-    // Add your booking logic here
   };
 
   const filteredTrips = trips.filter(trip => {
-    // Check if trip has a category
     if (!trip.category) return false;
     
-    // Apply filters
     const matchesCategory = !activeCategory || trip.category.slug === activeCategory;
     const matchesPrice = parseFloat(trip.price) <= maxPrice;
     const matchesSearch = searchQuery === '' || 
@@ -191,6 +187,11 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
           image={trip.image_url}
           highlights={trip.highlights || []}
           maxParticipants={trip.max_participants || 0}
+          learningOutcomes={trip.learning_outcomes || []}
+          personalDevelopment={trip.personal_development || []}
+          certifications={trip.certifications || []}
+          environmentalImpact={trip.environmental_impact || []}
+          communityBenefits={trip.community_benefits || []}
           onBook={() => handleBook(trip.slug)}
         />
       </div>
@@ -199,7 +200,6 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
 
   return (
     <div className="p-4 space-y-8">
-      {/* Category Selection */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {categories.map(category => {
           const IconComponent = iconMap[category.icon] || Info;
@@ -229,7 +229,6 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
         })}
       </div>
 
-      {/* Trips Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredTrips.map(trip => (
           <div key={trip.slug} className="relative">

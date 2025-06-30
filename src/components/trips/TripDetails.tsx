@@ -30,6 +30,11 @@ interface TripDetailsProps {
     validUntil: string;
     description: string;
   };
+  learningOutcomes?: { item: string }[];
+  personalDevelopment?: { item: string }[];
+  certifications?: { item: string }[];
+  environmentalImpact?: { item: string }[];
+  communityBenefits?: { item: string }[];
   onBook: () => void;
 }
 
@@ -42,18 +47,23 @@ const TripDetails: React.FC<TripDetailsProps> = ({
   image,
   startTime,
   endTime,
-  highlights = [], // Provide default empty array
-  included = [], // Provide default empty array
+  highlights = [],
+  included = [],
   meetingPoint,
   maxParticipants,
   specialOffer,
+  learningOutcomes = [],
+  personalDevelopment = [],
+  certifications = [],
+  environmentalImpact = [],
+  communityBenefits = [],
   onBook
 }) => {
-  // Check if the highlights array contains day-based activities
   const isMultiDay = highlights.length > 0 && 'day' in highlights[0];
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+      {/* Image and Special Offer Banner */}
       <div className="relative h-96">
         <img 
           src={image} 
@@ -68,12 +78,15 @@ const TripDetails: React.FC<TripDetailsProps> = ({
         )}
       </div>
 
+      {/* Content Area */}
       <div className="p-8">
+        {/* Title and Description */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold dark:text-white mb-2">{title}</h1>
           <p className="text-gray-600 dark:text-gray-300">{description}</p>
         </div>
 
+        {/* Key Info and Booking */}
         <div className="grid md:grid-cols-2 gap-8 mb-8">
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
@@ -117,11 +130,11 @@ const TripDetails: React.FC<TripDetailsProps> = ({
           </div>
         </div>
 
+        {/* Detailed Itinerary */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold mb-4 dark:text-white">Detailed Itinerary</h2>
           <div className="space-y-6">
             {isMultiDay ? (
-              // Multi-day itinerary
               highlights.map((day, index) => (
                 'day' in day && (
                   <div key={index} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
@@ -145,7 +158,6 @@ const TripDetails: React.FC<TripDetailsProps> = ({
                 )
               ))
             ) : (
-              // Single-day itinerary
               <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
                 <div className="space-y-4">
                   {highlights.map((activity, index) => (
@@ -169,8 +181,9 @@ const TripDetails: React.FC<TripDetailsProps> = ({
           </div>
         </div>
 
+        {/* What's Included */}
         {included.length > 0 && (
-          <div>
+          <div className="mb-8">
             <h2 className="text-xl font-semibold mb-4 dark:text-white">What's Included</h2>
             <ul className="grid grid-cols-2 gap-4">
               {included.map((item, index) => (
@@ -178,6 +191,66 @@ const TripDetails: React.FC<TripDetailsProps> = ({
                   <Info className="h-5 w-5 text-purple-600" />
                   {item}
                 </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Learning Outcomes */}
+        {learningOutcomes.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4 dark:text-white">Learning Outcomes</h2>
+            <ul className="list-disc pl-6 text-gray-600 dark:text-gray-300">
+              {learningOutcomes.map((item, idx) => (
+                <li key={idx}>{item.item}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Personal Development */}
+        {personalDevelopment.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4 dark:text-white">Personal Development</h2>
+            <ul className="list-disc pl-6 text-gray-600 dark:text-gray-300">
+              {personalDevelopment.map((item, idx) => (
+                <li key={idx}>{item.item}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Certifications */}
+        {certifications.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4 dark:text-white">Certifications</h2>
+            <ul className="list-disc pl-6 text-gray-600 dark:text-gray-300">
+              {certifications.map((item, idx) => (
+                <li key={idx}>{item.item}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Environmental Impact */}
+        {environmentalImpact.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4 dark:text-white">Environmental Impact</h2>
+            <ul className="list-disc pl-6 text-gray-600 dark:text-gray-300">
+              {environmentalImpact.map((item, idx) => (
+                <li key={idx}>{item.item}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Community Benefits */}
+        {communityBenefits.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4 dark:text-white">Community Benefits</h2>
+            <ul className="list-disc pl-6 text-gray-600 dark:text-gray-300">
+              {communityBenefits.map((item, idx) => (
+                <li key={idx}>{item.item}</li>
               ))}
             </ul>
           </div>
