@@ -79,37 +79,61 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [currentBookingSlug, setCurrentBookingSlug] = useState<string | null>(null);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [bookedSlugs, setBookedSlugs] = useState<string[]>([]);
 
   const stripe = useStripe();
   const elements = useElements();
 
-  // First check authentication status
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('No token found');
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setIsAuthenticated(false);
+      return;
+    }
 
+    const checkAndFetch = async () => {
+      try {
         const res = await fetch(`${BASE_URL}/api/auth/user`, {
-          method: 'GET',
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          }
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
         });
 
-        if (!res.ok) throw new Error('Not authenticated');
-        const user = await res.json();
-        console.log("✅ Authenticated user:", user);
+        if (!res.ok) throw new Error('Auth failed');
         setIsAuthenticated(true);
+
+        await fetchData();
+        await fetchBookedTrips();
       } catch (err) {
         setIsAuthenticated(false);
-        console.error("❌ Authentication check failed:", err);
+        console.error('❌ Auth error:', err);
       }
     };
 
-    checkAuth();
+    checkAndFetch();
   }, []);
+
+  const fetchBookedTrips = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const res = await fetch(`${BASE_URL}/api/auth/trip/booked`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!res.ok) throw new Error('Failed to fetch booked trips');
+      const data = await res.json();
+      setBookedSlugs(data);
+    } catch (error) {
+      console.error('Error fetching booked trips:', error);
+    }
+  };
 
   const processImageUrl = (url: string): string => {
     if (!url) return '';
@@ -174,12 +198,6 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
     }
   };
 
-  useEffect(() => {
-    if (isAuthenticated === true) {
-      fetchData();
-    }
-  }, [isAuthenticated]);
-
   const handleInitiateBooking = (tripSlug: string) => {
     setCurrentBookingSlug(tripSlug);
     setShowPaymentForm(true);
@@ -206,7 +224,7 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify({ participants: 1 }) // or use user input
+        body: JSON.stringify({ participants: 1 })
       });
 
       if (!bookingRes.ok) throw new Error('Booking failed');
@@ -256,6 +274,8 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
 
       if (!confirmRes.ok) throw new Error('Payment confirmation failed');
 
+      // Update booked trips list
+      setBookedSlugs(prev => [...prev, currentBookingSlug]);
       alert('✅ Trip booked and payment successful!');
       setShowPaymentForm(false);
       setCurrentBookingSlug(null);
@@ -313,6 +333,8 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
     const trip = trips.find(t => t.slug === selectedTrip);
     if (!trip) return null;
 
+    const isBooked = bookedSlugs.includes(trip.slug);
+
     return (
       <div className="p-4">
         <button
@@ -322,24 +344,25 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
           ← Back to All Trips
         </button>
         <TripDetails 
-        id={trip.slug}
-        type={trip.category.slug}
-        name={trip.title}
-        description={trip.description}
-        duration={trip.duration_days} // ✅ ADD THIS
-        price={parseFloat(trip.price)}
-        originalPrice={parseFloat(trip.original_price)}
-        discountPercentage={trip.discount_percentage}
-        image={trip.image_url}
-        highlights={trip.highlights || []}
-        maxParticipants={trip.max_participants || 0}
-        learningOutcomes={trip.learning_outcomes || []}
-        personalDevelopment={trip.personal_development || []}
-        certifications={trip.certifications || []}
-        environmentalImpact={trip.environmental_impact || []}
-        communityBenefits={trip.community_benefits || []}
-        onBook={() => handleInitiateBooking(trip.slug)}
-      />
+          id={trip.slug}
+          type={trip.category.slug}
+          name={trip.title}
+          description={trip.description}
+          duration={trip.duration_days}
+          price={parseFloat(trip.price)}
+          originalPrice={parseFloat(trip.original_price)}
+          discountPercentage={trip.discount_percentage}
+          image={trip.image_url}
+          highlights={trip.highlights || []}
+          maxParticipants={trip.max_participants || 0}
+          learningOutcomes={trip.learning_outcomes || []}
+          personalDevelopment={trip.personal_development || []}
+          certifications={trip.certifications || []}
+          environmentalImpact={trip.environmental_impact || []}
+          communityBenefits={trip.community_benefits || []}
+          onBook={() => !isBooked && handleInitiateBooking(trip.slug)}
+          isBooked={isBooked}
+        />
 
         {/* Payment Modal */}
         {showPaymentForm && (
@@ -420,31 +443,34 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredTrips.map(trip => (
-          <div key={trip.slug} className="relative">
-            {trip.discount_percentage > 0 && (
-              <div className="absolute top-4 right-4 z-10 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium">
-                {trip.discount_percentage}% OFF
-              </div>
-            )}
-            <TripCard
-  title={trip.title}
-  description={trip.description}
-  durationDays={trip.duration_days} // 👈 updated prop name
-  price={parseFloat(trip.price)}
-  originalPrice={parseFloat(trip.original_price)}
-  discountPercentage={trip.discount_percentage}
-  image={trip.image_url}
-  startTime={"09:00 AM"}
-  meetingPoint={"Beachside Entrance"}
-  maxParticipants={trip.max_participants || 0}
-  highlights={trip.highlights}
-  specialOffer={null} // or trip.specialOffer
-  onClick={() => setSelectedTrip(trip.slug)}
-/>
-
-          </div>
-        ))}
+        {filteredTrips.map(trip => {
+          const isBooked = bookedSlugs.includes(trip.slug);
+          return (
+            <div key={trip.slug} className="relative">
+              {trip.discount_percentage > 0 && (
+                <div className="absolute top-4 right-4 z-10 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+                  {trip.discount_percentage}% OFF
+                </div>
+              )}
+              <TripCard
+                title={trip.title}
+                description={trip.description}
+                durationDays={trip.duration_days}
+                price={parseFloat(trip.price)}
+                originalPrice={parseFloat(trip.original_price)}
+                discountPercentage={trip.discount_percentage}
+                image={trip.image_url}
+                startTime={"09:00 AM"}
+                meetingPoint={"Beachside Entrance"}
+                maxParticipants={trip.max_participants || 0}
+                highlights={trip.highlights}
+                specialOffer={null}
+                onClick={() => !isBooked && setSelectedTrip(trip.slug)}
+                isBooked={isBooked}
+              />
+            </div>
+          );
+        })}
       </div>
 
       {filteredTrips.length === 0 && !loading && (

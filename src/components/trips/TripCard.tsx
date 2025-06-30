@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, MapPin, Users, Calendar, Tag } from 'lucide-react';
+import { Clock, MapPin, Users, Calendar, Tag, Check } from 'lucide-react';
 
 interface Activity {
   time: string;
@@ -15,7 +15,7 @@ interface DayActivities {
 interface TripCardProps {
   title: string;
   description: string;
-  durationDays: number; // ← changed from string to number
+  durationDays: number;
   price: number;
   originalPrice?: number;
   discountPercentage?: number;
@@ -30,6 +30,7 @@ interface TripCardProps {
     description: string;
   };
   onClick: () => void;
+  isBooked?: boolean;
 }
 
 const TripCard: React.FC<TripCardProps> = ({
@@ -38,13 +39,15 @@ const TripCard: React.FC<TripCardProps> = ({
   durationDays,
   price,
   originalPrice,
+  discountPercentage,
   image,
   startTime,
   meetingPoint,
   maxParticipants,
   highlights = [],
   specialOffer,
-  onClick
+  onClick,
+  isBooked = false
 }) => {
   const previewHighlights = highlights
     .slice(0, 2)
@@ -60,9 +63,24 @@ const TripCard: React.FC<TripCardProps> = ({
 
   return (
     <div 
-      className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-      onClick={onClick}
+      className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer relative"
+      onClick={!isBooked ? onClick : undefined}
     >
+      {/* Discount badge */}
+      {discountPercentage && discountPercentage > 0 && (
+        <div className="absolute top-4 right-4 z-10 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+          {discountPercentage}% OFF
+        </div>
+      )}
+
+      {/* Booked badge */}
+      {isBooked && (
+        <div className="absolute top-4 left-4 z-10 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
+          <Check className="h-4 w-4" />
+          Booked
+        </div>
+      )}
+
       <div 
         className="h-48 bg-cover bg-center relative"
         style={{ backgroundImage: `url(${image})` }}
@@ -133,20 +151,32 @@ const TripCard: React.FC<TripCardProps> = ({
 
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-2xl font-bold text-purple-600">€{price}</p>
-            {originalPrice && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 line-through">€{originalPrice}</p>
+            <p className="text-2xl font-bold text-purple-600">€{price.toFixed(2)}</p>
+            {originalPrice && originalPrice > price && (
+              <p className="text-sm text-gray-500 dark:text-gray-400 line-through">
+                €{originalPrice.toFixed(2)}
+              </p>
             )}
           </div>
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              onClick();
-            }}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-          >
-            View Details
-          </button>
+          
+          {isBooked ? (
+            <button 
+              className="px-4 py-2 bg-green-500 text-white rounded-lg cursor-not-allowed"
+              disabled
+            >
+              Already Booked
+            </button>
+          ) : (
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                onClick();
+              }}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              View Details
+            </button>
+          )}
         </div>
       </div>
     </div>
