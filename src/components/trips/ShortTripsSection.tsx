@@ -3,6 +3,7 @@ import {
   Info, Bot as Lotus, Music, Trees as Tree, Smile as Family, 
   Factory, Dog, Home, Landmark, Heart, Music as Dance 
 } from 'lucide-react';
+import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js';
 import TripCard from './TripCard';
 import TripDetails from './TripDetails';
 
@@ -75,33 +76,37 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [currentBookingSlug, setCurrentBookingSlug] = useState<string | null>(null);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+
+  const stripe = useStripe();
+  const elements = useElements();
 
   // First check authentication status
   useEffect(() => {
-   const checkAuth = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    if (!token) throw new Error('No token found');
+    const checkAuth = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('No token found');
 
-    const res = await fetch(`${BASE_URL}/api/auth/user`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json'
+        const res = await fetch(`${BASE_URL}/api/auth/user`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          }
+        });
+
+        if (!res.ok) throw new Error('Not authenticated');
+        const user = await res.json();
+        console.log("✅ Authenticated user:", user);
+        setIsAuthenticated(true);
+      } catch (err) {
+        setIsAuthenticated(false);
+        console.error("❌ Authentication check failed:", err);
       }
-    });
-
-    if (!res.ok) throw new Error('Not authenticated');
-    const user = await res.json();
-    console.log("✅ Authenticated user:", user);
-    setIsAuthenticated(true);
-  } catch (err) {
-    setIsAuthenticated(false);
-    console.error("❌ Authentication check failed:", err);
-  }
-};
-
-
+    };
 
     checkAuth();
   }, []);
@@ -175,25 +180,92 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
     }
   }, [isAuthenticated]);
 
-  const handleBook = async (tripSlug: string) => {
+  const handleInitiateBooking = (tripSlug: string) => {
+    setCurrentBookingSlug(tripSlug);
+    setShowPaymentForm(true);
+  };
+
+  const handleBook = async () => {
+    if (!currentBookingSlug) return;
+    if (!stripe || !elements) return;
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Please log in to book trips');
+      return;
+    }
+
+    setPaymentProcessing(true);
+
     try {
-      const response = await fetch(`${BASE_URL}/api/trips/${tripSlug}/book`, {
+      // 1. Book the trip (create booking)
+      const bookingRes = await fetch(`${BASE_URL}/api/auth/trip/${currentBookingSlug}/book`, {
         method: 'POST',
-        credentials: 'include',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-          Accept: 'application/json'
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ participants: 1 }) // or use user input
+      });
+
+      if (!bookingRes.ok) throw new Error('Booking failed');
+      const bookingData = await bookingRes.json();
+      const bookingId = bookingData.booking_id;
+
+      // 2. Create Stripe Payment Intent
+      const paymentRes = await fetch(`${BASE_URL}/api/auth/trip/payment/create`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ booking_id: bookingId })
+      });
+
+      if (!paymentRes.ok) throw new Error('Payment intent failed');
+      const paymentData = await paymentRes.json();
+      const clientSecret = paymentData.clientSecret;
+
+      // 3. Use Stripe to confirm card payment
+      const result = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: elements.getElement(CardElement)!,
         }
       });
 
-      if (!response.ok) throw new Error('Booking failed');
-      
-      const data = await response.json();
-      console.log('Booking successful:', data);
-      alert('Trip booked successfully!');
+      if (result.error) {
+        console.error(result.error.message);
+        alert('Payment failed: ' + result.error.message);
+        return;
+      }
+
+      // 4. Notify backend about success
+      const confirmRes = await fetch(`${BASE_URL}/api/auth/trip/payment/confirm`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          payment_intent_id: result.paymentIntent?.id
+        })
+      });
+
+      if (!confirmRes.ok) throw new Error('Payment confirmation failed');
+
+      alert('✅ Trip booked and payment successful!');
+      setShowPaymentForm(false);
+      setCurrentBookingSlug(null);
+      // Refresh trips data
+      fetchData();
     } catch (err) {
-      console.error('Booking error:', err);
-      alert('Failed to book trip. Please try again.');
+      console.error('Booking/payment error:', err);
+      alert('❌ Booking or payment failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    } finally {
+      setPaymentProcessing(false);
     }
   };
 
@@ -265,8 +337,52 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
           certifications={trip.certifications || []}
           environmentalImpact={trip.environmental_impact || []}
           communityBenefits={trip.community_benefits || []}
-          onBook={() => handleBook(trip.slug)}
+          onBook={() => handleInitiateBooking(trip.slug)}
         />
+
+        {/* Payment Modal */}
+        {showPaymentForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full">
+              <h3 className="text-xl font-bold mb-4">Complete Your Booking</h3>
+              <div className="mb-4">
+                <label className="block mb-2 text-sm text-gray-600">Payment Card</label>
+                <div className="border rounded p-2 bg-white">
+                  <CardElement options={{
+                    style: {
+                      base: {
+                        fontSize: '16px',
+                        color: '#424770',
+                        '::placeholder': {
+                          color: '#aab7c4',
+                        },
+                      },
+                      invalid: {
+                        color: '#9e2146',
+                      },
+                    },
+                  }} />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowPaymentForm(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  disabled={paymentProcessing}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleBook}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-purple-300"
+                  disabled={!stripe || paymentProcessing}
+                >
+                  {paymentProcessing ? 'Processing...' : 'Pay & Book'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
