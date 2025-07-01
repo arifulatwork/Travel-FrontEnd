@@ -26,6 +26,15 @@ interface BalkanTrip {
   not_included: string[];
 }
 
+// Helper to get full image URL including storage path if missing
+const getFullImageUrl = (url: string) => {
+  if (!url) return '';
+  // If url already contains http or https, return as is
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  // Otherwise, prefix with BASE_URL + /storage/
+  return `${BASE_URL}/storage/${url.replace(/^\/?storage\/?/, '')}`;
+};
+
 const BalkanTripsSection: React.FC = () => {
   const [trips, setTrips] = useState<BalkanTrip[]>([]);
   const [selectedTrip, setSelectedTrip] = useState<BalkanTrip | null>(null);
@@ -47,7 +56,7 @@ const BalkanTripsSection: React.FC = () => {
   const handleBook = () => {
     if (selectedTrip) {
       console.log('Booking:', selectedTrip.slug);
-      // Here you can open a Stripe payment modal or navigate to checkout
+      // Implement your booking or Stripe payment modal here
     }
   };
 
@@ -69,7 +78,7 @@ const BalkanTripsSection: React.FC = () => {
           description={selectedTrip.description}
           duration={parseInt(selectedTrip.duration)}
           price={selectedTrip.price}
-          image={selectedTrip.image_url}
+          image={getFullImageUrl(selectedTrip.image_url)}
           maxParticipants={selectedTrip.group_size.max}
           highlights={selectedTrip.itinerary.map((item) => ({
             day: item.day,
@@ -108,7 +117,7 @@ const BalkanTripsSection: React.FC = () => {
             description={trip.description}
             durationDays={parseInt(trip.duration)}
             price={trip.price}
-            image={trip.image_url}
+            image={getFullImageUrl(trip.image_url)}
             maxParticipants={trip.group_size.max}
             highlights={trip.itinerary.slice(0, 2).map((i) => ({
               time: '',
