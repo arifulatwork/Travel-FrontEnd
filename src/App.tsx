@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
@@ -18,7 +18,21 @@ import { useSettings } from './contexts/SettingsContext';
 // 🔐 Stripe publishable key from .env (Vite syntax)
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_yourKeyHere');
 
-const TRANSLATIONS = {
+interface Translations {
+  explore: string;
+  profile: string;
+  tokens: string;
+  weather: string;
+  messages: string;
+  settings: string;
+  networking: string;
+  premium: string;
+  login: string;
+  logout: string;
+  loginRequired: string;
+}
+
+const TRANSLATIONS: Record<string, Translations> = {
   en: {
     explore: 'Explore',
     profile: 'Profile',
@@ -85,7 +99,11 @@ function App() {
               {TRANSLATIONS.en.loginRequired}
             </div>
           )}
-          <LoginForm onLoginSuccess={handleLoginSuccess} />
+          <LoginForm 
+            onLoginSuccess={handleLoginSuccess} 
+            onForgotPassword={() => {}} 
+            onSignUp={() => {}}
+          />
         </div>
       );
     }
@@ -111,10 +129,7 @@ function App() {
             activeTab={activeTab}
             setActiveTab={handleTabChange}
             darkMode={settings.appearance.darkMode}
-            translations={{
-              ...TRANSLATIONS.en,
-              login: isAuthenticated ? 'Logout' : 'Login'
-            }}
+            translations={TRANSLATIONS.en}
           />
 
           <main className={`flex-1 p-8 ml-64 ${settings.appearance.darkMode ? 'text-white' : 'text-gray-900'}`}>

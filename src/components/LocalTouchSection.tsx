@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Star, Clock, MapPin, Heart, Music, Utensils, Palette, X, Info, Check, CreditCard, ChevronDown, Sun, Moon, Award, Leaf, Wine, Sparkles } from 'lucide-react';
 import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js';
+import {QRCodeSVG} from 'qrcode.react';
 
 interface Experience {
   id: number;
@@ -21,13 +22,18 @@ interface Experience {
     reviews: number;
     image: string | null;
   };
-  highlights: { value: string }[]; // ✅ Updated type
+  highlights: { value: string }[];
   why_choose: {
     icon: string;
     title: string;
     description: string;
   }[];
   user_has_booking?: boolean;
+  user_booking_details?: {
+    date: string;
+    time: string;
+    participants: number;
+  };
 }
 
 interface BookingDetails {
@@ -45,6 +51,8 @@ const LocalTouchSection: React.FC = () => {
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [selectedExperience, setSelectedExperience] = useState<Experience | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [bookingDetailsToShow, setBookingDetailsToShow] = useState<Experience | null>(null);
   const [bookingDetails, setBookingDetails] = useState<BookingDetails>({
     date: '',
     time: '',
@@ -80,9 +88,11 @@ const LocalTouchSection: React.FC = () => {
         
         const processedData = data.map((exp: any) => {
           const host = typeof exp.host === 'string' ? JSON.parse(exp.host) : exp.host;
-          // ✅ Maintain optional JSON parsing for highlights
           const highlights = typeof exp.highlights === 'string' ? JSON.parse(exp.highlights) : exp.highlights;
           const why_choose = typeof exp.why_choose === 'string' ? JSON.parse(exp.why_choose) : exp.why_choose;
+          const user_booking_details = typeof exp.user_booking_details === 'string' 
+            ? JSON.parse(exp.user_booking_details) 
+            : exp.user_booking_details;
           
           return {
             ...exp,
@@ -94,7 +104,8 @@ const LocalTouchSection: React.FC = () => {
             },
             highlights,
             why_choose,
-            user_has_booking: exp.user_has_booking || false
+            user_has_booking: exp.user_has_booking || false,
+            user_booking_details
           };
         });
         
@@ -239,7 +250,7 @@ const LocalTouchSection: React.FC = () => {
         {experience.highlights?.map((highlight, index) => (
           <li key={index} className="flex items-start gap-2">
             <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
-            <span>{highlight.value}</span> {/* ✅ Updated to use highlight.value */}
+            <span>{highlight.value}</span>
           </li>
         ))}
       </ul>
@@ -371,8 +382,11 @@ const LocalTouchSection: React.FC = () => {
                         </div>
                         {experience.user_has_booking ? (
                           <button
-                            className="bg-gray-400 text-white px-4 py-2 rounded-lg cursor-not-allowed"
-                            disabled
+                            onClick={() => {
+                              setBookingDetailsToShow(experience);
+                              setShowDetailsModal(true);
+                            }}
+                            className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
                           >
                             View Details
                           </button>
@@ -530,6 +544,50 @@ const LocalTouchSection: React.FC = () => {
                 </button>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* View Details Modal */}
+      {showDetailsModal && bookingDetailsToShow && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold dark:text-white">Booking Details</h3>
+              <button
+                onClick={() => {
+                  setShowDetailsModal(false);
+                  setBookingDetailsToShow(null);
+                }}
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-sm dark:text-gray-200">
+              <p><strong>Experience Name:</strong> {bookingDetailsToShow.name}</p>
+              <p><strong>Location:</strong> {bookingDetailsToShow.location}</p>
+              <p><strong>City:</strong> {bookingDetailsToShow.city}</p>
+              <p><strong>Duration:</strong> {bookingDetailsToShow.duration}</p>
+              <p><strong>Max Participants:</strong> {bookingDetailsToShow.max_participants}</p>
+              <p><strong>Booking Date:</strong> {new Date(bookingDetailsToShow.user_booking_details?.date || '').toLocaleDateString()}</p>
+              <p><strong>Booking Time:</strong> {bookingDetailsToShow.user_booking_details?.time?.slice(0, 5)}</p>
+              <p><strong>Participants:</strong> {bookingDetailsToShow.user_booking_details?.participants}</p>
+              <p><strong>Booked By:</strong> You</p>
+              <p className="text-xs text-gray-400 italic mt-2">call marta</p>
+
+              {/* QR Code */}
+              <div className="pt-4 flex justify-center">
+                <QRCodeSVG
+                  value={`Booked by: Travel with Marta\nExperience: ${bookingDetailsToShow.name}\nDate: ${bookingDetailsToShow.user_booking_details?.date}\nTime: ${bookingDetailsToShow.user_booking_details?.time}\nDuration: ${bookingDetailsToShow.duration}\nParticipants: ${bookingDetailsToShow.user_booking_details?.participants}`}
+                  size={160}
+                  fgColor="#4C1D95"
+                  level="H"
+                  includeMargin={true}
+                />
+              </div>
+            </div>
           </div>
         </div>
       )}
