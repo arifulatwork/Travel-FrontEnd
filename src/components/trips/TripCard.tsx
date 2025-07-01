@@ -151,7 +151,7 @@ const TripCard: React.FC<TripCardProps> = ({
 
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-2xl font-bold text-purple-600">€{price.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-purple-600">€{Number(price).toFixed(2)}</p>
             {originalPrice && originalPrice > price && (
               <p className="text-sm text-gray-500 dark:text-gray-400 line-through">
                 €{originalPrice.toFixed(2)}

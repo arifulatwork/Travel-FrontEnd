@@ -1,87 +1,89 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plane } from 'lucide-react';
 import TripCard from './TripCard';
 import TripDetails from './TripDetails';
 
-const tripData = {
-  id: 'albania-macedonia-greece',
-  title: 'Albania, Macedonia & Greece Adventure',
-  description: 'Embark on an unforgettable journey through the heart of the Balkans. Discover ancient ruins, vibrant cultures, and breathtaking landscapes across three fascinating countries. From the pristine beaches of the Albanian Riviera to the historic streets of Ohrid and the iconic monuments of Greece.',
-  duration: '15 days',
-  price: 2499,
-  image: 'https://images.unsplash.com/photo-1592486058517-36236ba247c8?auto=format&fit=crop&w=800&q=80',
-  destinations: ['Albania', 'North Macedonia', 'Greece'],
-  groupSize: {
-    min: 4,
-    max: 12
-  },
-  itinerary: [
-    {
-      day: 1,
-      title: 'Arrival in Tirana',
-      description: 'Welcome to Albania! Upon arrival at Tirana International Airport, transfer to your hotel. Evening welcome meeting and traditional dinner.',
-      meals: ['Dinner'],
-      accommodation: 'Hotel in Tirana'
-    },
-    {
-      day: 2,
-      title: 'Tirana City Tour & Kruja',
-      description: 'Explore Tirana\'s highlights including Skanderbeg Square and the National Museum. Afternoon visit to historic Kruja.',
-      meals: ['Breakfast', 'Lunch'],
-      accommodation: 'Hotel in Tirana'
-    },
-    {
-      day: 3,
-      title: 'Ohrid, North Macedonia',
-      description: 'Cross into Macedonia and discover UNESCO-listed Ohrid, known for its beautiful lake and historic churches.',
-      meals: ['Breakfast', 'Dinner'],
-      accommodation: 'Hotel in Ohrid'
-    },
-    {
-      day: 4,
-      title: 'Meteora, Greece',
-      description: 'Travel to Greece to visit the magnificent monasteries of Meteora perched atop dramatic rock formations.',
-      meals: ['Breakfast', 'Lunch'],
-      accommodation: 'Hotel in Kalambaka'
-    }
-  ],
-  included: [
-    'All accommodations in 4-star hotels',
-    'Professional English-speaking guide',
-    'Private transportation',
-    'Daily breakfast and selected meals',
-    'All entrance fees',
-    'Airport transfers',
-    'Local experiences and cultural activities'
-  ],
-  notIncluded: [
-    'International flights',
-    'Travel insurance',
-    'Personal expenses',
-    'Optional activities',
-    'Gratuities',
-    'Visa fees (if applicable)'
-  ]
-};
+const BASE_URL = 'http://127.0.0.1:8000';
+
+interface BalkanTrip {
+  id: number;
+  slug: string;
+  title: string;
+  description: string;
+  duration: string;
+  price: number;
+  image_url: string;
+  destinations: string[];
+  group_size: { min: number; max: number };
+  itinerary: {
+    day: number;
+    title: string;
+    description: string;
+    meals: string[];
+    accommodation: string;
+  }[];
+  included: string[];
+  not_included: string[];
+}
 
 const BalkanTripsSection: React.FC = () => {
-  const [showFullTrip, setShowFullTrip] = useState(false);
+  const [trips, setTrips] = useState<BalkanTrip[]>([]);
+  const [selectedTrip, setSelectedTrip] = useState<BalkanTrip | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${BASE_URL}/api/balkan-trips`)
+      .then(res => res.json())
+      .then(data => {
+        setTrips(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to fetch balkan trips', err);
+        setLoading(false);
+      });
+  }, []);
 
   const handleBook = () => {
-    // Implement booking logic
-    console.log('Booking trip:', tripData.id);
+    if (selectedTrip) {
+      console.log('Booking:', selectedTrip.slug);
+      // Here you can open a Stripe payment modal or navigate to checkout
+    }
   };
 
-  if (showFullTrip) {
+  if (loading) {
+    return <div className="p-6 text-center">Loading Balkan trips...</div>;
+  }
+
+  if (selectedTrip) {
     return (
       <div className="p-4">
         <button
-          onClick={() => setShowFullTrip(false)}
+          onClick={() => setSelectedTrip(null)}
           className="mb-6 text-purple-600 hover:text-purple-700 font-medium flex items-center gap-2"
         >
           ← Back to All Trips
         </button>
-        <TripDetails {...tripData} onBook={handleBook} />
+        <TripDetails
+          title={selectedTrip.title}
+          description={selectedTrip.description}
+          duration={parseInt(selectedTrip.duration)}
+          price={selectedTrip.price}
+          image={selectedTrip.image_url}
+          maxParticipants={selectedTrip.group_size.max}
+          highlights={selectedTrip.itinerary.map((item) => ({
+            day: item.day,
+            activities: [
+              {
+                time: '',
+                activity: item.title,
+                description: `${item.description}\nMeals: ${item.meals.join(', ')}\nStay: ${item.accommodation}`
+              }
+            ]
+          }))}
+          included={selectedTrip.included}
+          onBook={handleBook}
+        />
       </div>
     );
   }
@@ -94,15 +96,28 @@ const BalkanTripsSection: React.FC = () => {
           <h2 className="text-2xl font-bold dark:text-white">Balkan Adventures</h2>
         </div>
         <p className="text-gray-600 dark:text-gray-300">
-          Discover our curated collection of multi-country adventures
+          Discover our curated collection of multi-country Balkan tours
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <TripCard
-          {...tripData}
-          onClick={() => setShowFullTrip(true)}
-        />
+        {trips.map((trip) => (
+          <TripCard
+            key={trip.slug}
+            title={trip.title}
+            description={trip.description}
+            durationDays={parseInt(trip.duration)}
+            price={trip.price}
+            image={trip.image_url}
+            maxParticipants={trip.group_size.max}
+            highlights={trip.itinerary.slice(0, 2).map((i) => ({
+              time: '',
+              activity: i.title,
+              description: i.description
+            }))}
+            onClick={() => setSelectedTrip(trip)}
+          />
+        ))}
       </div>
     </div>
   );
