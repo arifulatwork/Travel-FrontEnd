@@ -41,6 +41,13 @@ interface Attraction {
   highlights?: string[];
 }
 
+interface AttractionBooking {
+  attraction: Attraction;
+  status: string;
+  participants: number;
+  booking_date: string;
+}
+
 interface DestinationDetailsProps {
   country: string;
   city: string;
@@ -70,25 +77,40 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [bookingId, setBookingId] = useState<number | null>(null);
   const [showPayment, setShowPayment] = useState(false);
+  const [bookedAttractionIds, setBookedAttractionIds] = useState<number[]>([]);
+  const [bookingDetails, setBookingDetails] = useState<AttractionBooking | null>(null);
+  const [showBookingModal, setShowBookingModal] = useState(false);
 
-  // Authentication check
+  // Authentication check and fetch bookings
   useEffect(() => {
-    const fetchUser = async () => {
+    const fetchUserAndBookings = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch('http://127.0.0.1:8000/api/auth/user', {
+        
+        // Fetch user
+        const userRes = await fetch('http://127.0.0.1:8000/api/auth/user', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
-        const data = await res.json();
-        console.log('✅ Authenticated user (DestinationDetails):', data);
+        const userData = await userRes.json();
+        console.log('✅ Authenticated user (DestinationDetails):', userData);
+
+        // Fetch bookings
+        const bookingsRes = await fetch('http://127.0.0.1:8000/api/auth/attraction/bookings', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const bookingsData = await bookingsRes.json();
+        const ids = bookingsData.map((b: any) => b.attraction.id);
+        setBookedAttractionIds(ids);
       } catch (err) {
-        console.error('❌ Error fetching user in DestinationDetails:', err);
+        console.error('❌ Error fetching user or booked attractions:', err);
       }
     };
 
-    fetchUser();
+    fetchUserAndBookings();
   }, []);
 
   const minGroupSize = Math.min(...attractions.map(a => a.minGroupSize || 0));
@@ -156,41 +178,47 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
   };
 
   const handleBookNow = async (attraction: Attraction) => {
-    try {
-      const token = localStorage.getItem('token');
-      const participants = groupSize || 1;
+  try {
+    const token = localStorage.getItem('token');
+    const participants = groupSize || 1;
 
-      // Step 1: Book
-      const res = await fetch(`http://127.0.0.1:8000/api/auth/attraction/book/${attraction.id}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ participants }),
-      });
-      const bookingData = await res.json();
-      setBookingId(bookingData.booking_id);
+    const res = await fetch(`http://127.0.0.1:8000/api/auth/attraction/book/${attraction.id}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ participants }),
+    });
 
-      // Step 2: Create Stripe payment intent
-      const paymentRes = await fetch(`http://127.0.0.1:8000/api/auth/attraction/payment/create`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ booking_id: bookingData.booking_id }),
-      });
-      const paymentData = await paymentRes.json();
-      setClientSecret(paymentData.clientSecret);
+    const bookingData = await res.json();
 
-      // Show Stripe payment modal
-      setSelectedAttraction(attraction);
-      setShowPayment(true);
-    } catch (error) {
-      console.error('Booking or payment error:', error);
+    // 🛑 Booking already exists and paid
+    if (bookingData.already_paid) {
+      alert('You have already booked and paid for this attraction.');
+      return;
     }
-  };
+
+    setBookingId(bookingData.booking_id);
+
+    const paymentRes = await fetch(`http://127.0.0.1:8000/api/auth/attraction/payment/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ booking_id: bookingData.booking_id }),
+    });
+
+    const paymentData = await paymentRes.json();
+    setClientSecret(paymentData.clientSecret);
+
+    setSelectedAttraction(attraction);
+    setShowPayment(true);
+  } catch (error) {
+    console.error('Booking or payment error:', error);
+  }
+};
 
   const filteredAttractions = attractions.filter(attraction => 
     (visitType === 'group' && attraction.groupPrice ? attraction.groupPrice : attraction.price) <= maxPrice
@@ -338,17 +366,35 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
                       <span className="text-sm text-gray-500"> (€{attraction.groupPrice} pp)</span>
                     )}
                   </span>
-                  <button 
-                    onClick={() => handleBookNow(attraction)}
-                    className={`px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 ${
-                      visitType === 'group' && (!groupSize || groupSize < minGroupSize || groupSize > maxGroupSize)
-                        ? 'opacity-50 cursor-not-allowed'
-                        : ''
-                    }`}
-                    disabled={visitType === 'group' && (!groupSize || groupSize < minGroupSize || groupSize > maxGroupSize)}
-                  >
-                    Book Now
-                  </button>
+                  {bookedAttractionIds.includes(attraction.id) ? (
+                    <button
+                      onClick={() => {
+                        const booked = attractions.find(a => a.id === attraction.id);
+                        setBookingDetails({
+                          attraction: booked!,
+                          status: 'paid',
+                          participants: groupSize || 1,
+                          booking_date: new Date().toISOString(),
+                        });
+                        setShowBookingModal(true);
+                      }}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    >
+                      View Booking
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => handleBookNow(attraction)}
+                      className={`px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 ${
+                        visitType === 'group' && (!groupSize || groupSize < minGroupSize || groupSize > maxGroupSize)
+                          ? 'opacity-50 cursor-not-allowed'
+                          : ''
+                      }`}
+                      disabled={visitType === 'group' && (!groupSize || groupSize < minGroupSize || groupSize > maxGroupSize)}
+                    >
+                      Book Now
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -369,6 +415,55 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
             onClose={() => setShowPayment(false)}
           />
         </Elements>
+      )}
+
+      {/* Booking Details Modal */}
+      {showBookingModal && bookingDetails && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-xl w-full max-w-lg">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Booking Details</h3>
+              <button onClick={() => setShowBookingModal(false)}>
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <p><strong>Attraction:</strong> {bookingDetails.attraction.name}</p>
+              <p><strong>Type:</strong> {bookingDetails.attraction.type}</p>
+              <p><strong>Duration:</strong> {bookingDetails.attraction.duration}</p>
+              <p><strong>Status:</strong> <span className="text-green-600">Paid</span></p>
+              <p><strong>Participants:</strong> {bookingDetails.participants}</p>
+              <p><strong>Booking Date:</strong> {new Date(bookingDetails.booking_date).toLocaleString()}</p>
+              {bookingDetails.attraction.guide && (
+                <div className="mt-3 pt-3 border-t">
+                  <p className="font-medium">Your Guide:</p>
+                  <div className="flex items-center space-x-2 mt-1">
+                    {bookingDetails.attraction.guide.avatar ? (
+                      <img 
+                        src={getImageUrl(bookingDetails.attraction.guide.avatar)} 
+                        alt={bookingDetails.attraction.guide.name}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                        <span className="text-purple-600 font-medium">
+                          {bookingDetails.attraction.guide.name.charAt(0)}
+                        </span>
+                      </div>
+                    )}
+                    <div>
+                      <p>{bookingDetails.attraction.guide.name}</p>
+                      <div className="flex items-center text-sm text-gray-500">
+                        <span className="text-yellow-500 mr-1">★</span>
+                        {bookingDetails.attraction.guide.rating} ({bookingDetails.attraction.guide.reviews} reviews)
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
