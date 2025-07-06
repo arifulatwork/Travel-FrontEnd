@@ -37,6 +37,7 @@ interface TripDetailsProps {
   communityBenefits?: { item: string }[];
   isBooked: boolean;
   onBook: () => void;
+  onViewDetails: () => void;
 }
 
 const TripDetails: React.FC<TripDetailsProps> = ({
@@ -59,7 +60,8 @@ const TripDetails: React.FC<TripDetailsProps> = ({
   environmentalImpact = [],
   communityBenefits = [],
   isBooked,
-  onBook
+  onBook,
+  onViewDetails
 }) => {
   const isMultiDay = highlights.length > 0 && 'day' in highlights[0];
 
@@ -125,10 +127,10 @@ const TripDetails: React.FC<TripDetailsProps> = ({
             </div>
             {isBooked ? (
               <button
-                className="w-full bg-green-500 text-white py-3 px-4 rounded-lg cursor-not-allowed"
-                disabled
+                onClick={onViewDetails}
+                className="w-full bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600"
               >
-                View Details
+                View Booking Details
               </button>
             ) : (
               <button

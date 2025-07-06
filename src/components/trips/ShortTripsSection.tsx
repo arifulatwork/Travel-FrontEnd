@@ -80,6 +80,8 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
   const [currentBookingSlug, setCurrentBookingSlug] = useState<string | null>(null);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [bookedSlugs, setBookedSlugs] = useState<string[]>([]);
+  const [bookingDetails, setBookingDetails] = useState<any | null>(null);
+  const [showBookingModal, setShowBookingModal] = useState(false);
 
   const stripe = useStripe();
   const elements = useElements();
@@ -132,6 +134,29 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
       setBookedSlugs(data);
     } catch (error) {
       console.error('Error fetching booked trips:', error);
+    }
+  };
+
+  const handleViewDetails = async (tripSlug: string) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const res = await fetch(`${BASE_URL}/api/auth/trip/${tripSlug}/booking-details`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!res.ok) throw new Error('Failed to load booking details');
+
+      const data = await res.json();
+      setBookingDetails(data);
+      setShowBookingModal(true);
+    } catch (err) {
+      alert('Could not fetch booking details.');
+      console.error(err);
     }
   };
 
@@ -360,6 +385,7 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
           communityBenefits={trip.community_benefits || []}
           onBook={() => !isBooked && handleInitiateBooking(trip.slug)}
           isBooked={isBooked}
+          onViewDetails={() => handleViewDetails(trip.slug)}
         />
 
         {/* Payment Modal */}
@@ -400,6 +426,31 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
                   disabled={!stripe || paymentProcessing}
                 >
                   {paymentProcessing ? 'Processing...' : 'Pay & Book'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Booking Details Modal */}
+        {showBookingModal && bookingDetails && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white p-6 rounded-xl shadow-lg max-w-md w-full">
+              <h2 className="text-xl font-bold mb-4 text-purple-700">Your Booking Details</h2>
+              <ul className="space-y-2 text-sm text-gray-700">
+                <li><strong>Trip:</strong> {bookingDetails.trip_title}</li>
+                <li><strong>Participants:</strong> {bookingDetails.participants}</li>
+                <li><strong>Booking Date:</strong> {new Date(bookingDetails.booking_date).toLocaleDateString()}</li>
+                <li><strong>Meeting Point:</strong> {bookingDetails.meeting_point}</li>
+                <li><strong>Duration:</strong> {bookingDetails.duration_days} days</li>
+                <li><strong>Price Paid:</strong> €{bookingDetails.price}</li>
+              </ul>
+              <div className="mt-6 text-right">
+                <button
+                  onClick={() => setShowBookingModal(false)}
+                  className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+                >
+                  Close
                 </button>
               </div>
             </div>
