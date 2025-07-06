@@ -361,11 +361,13 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
 
                 <div className="flex items-center justify-between mt-4">
                   <span className="text-purple-600 font-semibold">
-                    €{attraction.price}
-                    {visitType === 'group' && attraction.groupPrice && groupSize >= minGroupSize && (
-                      <span className="text-sm text-gray-500"> (€{attraction.groupPrice} pp)</span>
-                    )}
-                  </span>
+                  {visitType === 'group' && attraction.groupPrice && groupSize >= minGroupSize
+                    ? `€${(attraction.groupPrice * groupSize).toFixed(2)} `
+                    : `€${attraction.price.toFixed(2)}`}
+                  {visitType === 'group' && attraction.groupPrice && groupSize >= minGroupSize && (
+                    <span className="text-sm text-gray-500"> (€{attraction.groupPrice} per person)</span>
+                  )}
+                </span>
                   {bookedAttractionIds.includes(attraction.id) ? (
                     <button
                       onClick={() => {
