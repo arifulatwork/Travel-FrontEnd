@@ -344,16 +344,14 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
           ← Back to All Trips
         </button>
         <TripDetails 
-          id={trip.slug}
-          type={trip.category.slug}
-          name={trip.title}
+          title={trip.title}
           description={trip.description}
           duration={trip.duration_days}
           price={parseFloat(trip.price)}
           originalPrice={parseFloat(trip.original_price)}
-          discountPercentage={trip.discount_percentage}
           image={trip.image_url}
-          highlights={trip.highlights || []}
+          highlights={trip.highlights}
+          included={[]}
           maxParticipants={trip.max_participants || 0}
           learningOutcomes={trip.learning_outcomes || []}
           personalDevelopment={trip.personal_development || []}
@@ -465,7 +463,7 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
                 maxParticipants={trip.max_participants || 0}
                 highlights={trip.highlights}
                 specialOffer={null}
-                onClick={() => !isBooked && setSelectedTrip(trip.slug)}
+                onClick={() => setSelectedTrip(trip.slug)}
                 isBooked={isBooked}
               />
             </div>
