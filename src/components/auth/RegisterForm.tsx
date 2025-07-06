@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 
 interface RegisterFormProps {
   onRegisterSuccess: () => void;
@@ -12,6 +12,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onRegisterSuccess }) => {
     password: '',
     age: '',
     interests: [] as string[],
+    location: '',
   });
 
   const [errors, setErrors] = useState({
@@ -20,11 +21,16 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onRegisterSuccess }) => {
     email: '',
     password: '',
     age: '',
+    avatar: '',
+    location: '',
     general: '',
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const interestOptions = ['Cities', 'Nature', 'Culture', 'Food', 'Adventure'];
 
@@ -36,6 +42,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onRegisterSuccess }) => {
       email: '',
       password: '',
       age: '',
+      avatar: '',
+      location: '',
       general: '',
     };
 
@@ -73,8 +81,50 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onRegisterSuccess }) => {
       valid = false;
     }
 
+    // Optional file validation if you want to make it required
+    // if (!selectedFile) {
+    //   newErrors.avatar = 'Profile photo is required';
+    //   valid = false;
+    // }
+
     setErrors(newErrors);
     return valid;
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      
+      // Validate file type
+      if (!file.type.match('image.*')) {
+        setErrors({...errors, avatar: 'Please select an image file'});
+        return;
+      }
+
+      // Validate file size (e.g., 5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors({...errors, avatar: 'File size must be less than 5MB'});
+        return;
+      }
+
+      setSelectedFile(file);
+      setErrors({...errors, avatar: ''});
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -86,18 +136,28 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onRegisterSuccess }) => {
     setErrors({...errors, general: ''});
 
     try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('first_name', formData.firstName);
+      formDataToSend.append('last_name', formData.lastName);
+      formDataToSend.append('email', formData.email);
+      formDataToSend.append('password', formData.password);
+      formDataToSend.append('password_confirmation', formData.password);
+      formDataToSend.append('age', formData.age);
+      formData.interests.forEach(interest => {
+        formDataToSend.append('interests[]', interest);
+      });
+      if (selectedFile) {
+        formDataToSend.append('avatar', selectedFile);
+      }
+      if (formData.location) {
+        formDataToSend.append('location', formData.location);
+      }
+
       const response = await fetch('http://127.0.0.1:8000/api/auth/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          email: formData.email,
-          password: formData.password,
-          password_confirmation: formData.password,
-          age: parseInt(formData.age),
-          interests: formData.interests,
-        }),
+        body: formDataToSend,
+        // Don't set Content-Type header when using FormData
+        // The browser will set it automatically with the correct boundary
       });
 
       const data = await response.json();
@@ -245,6 +305,71 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onRegisterSuccess }) => {
               placeholder="25"
             />
             {errors.age && <p className="mt-1 text-sm text-red-600">{errors.age}</p>}
+          </div>
+
+          {/* Photo Upload Field */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Profile Photo (Optional)</label>
+            <div className="mt-1 flex items-center">
+              {previewUrl ? (
+                <div className="relative">
+                  <img
+                    src={previewUrl}
+                    alt="Preview"
+                    className="h-16 w-16 rounded-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRemovePhoto}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-16 w-16 rounded-full bg-gray-100">
+                  <svg className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+              )}
+              <div className="ml-4">
+                <label
+                  htmlFor="avatar-upload"
+                  className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 cursor-pointer"
+                >
+                  {selectedFile ? 'Change photo' : 'Upload photo'}
+                </label>
+                <input
+                  id="avatar-upload"
+                  name="avatar"
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="image/*"
+                  className="sr-only"
+                />
+                <p className="text-xs text-gray-500 mt-1">PNG, JPG, GIF up to 5MB</p>
+              </div>
+            </div>
+            {errors.avatar && <p className="mt-1 text-sm text-red-600">{errors.avatar}</p>}
+          </div>
+
+          {/* Location Field */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Location (Optional)</label>
+            <input
+              type="text"
+              value={formData.location}
+              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                errors.location ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="New York, USA"
+            />
+            {errors.location && <p className="mt-1 text-sm text-red-600">{errors.location}</p>}
           </div>
 
           <div>
