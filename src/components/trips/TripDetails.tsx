@@ -128,7 +128,7 @@ const TripDetails: React.FC<TripDetailsProps> = ({
             {isBooked ? (
               <button
                 onClick={onViewDetails}
-                className="w-full bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600"
+                className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors"
               >
                 View Booking Details
               </button>
