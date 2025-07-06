@@ -13,9 +13,9 @@ import SettingsScreen from './components/settings/SettingsScreen';
 import NetworkingScreen from './components/networking/NetworkingScreen';
 import PremiumSection from './components/premium/PremiumSection';
 import LoginForm from './components/auth/LoginForm';
+import RegisterForm from './components/auth/RegisterForm'; // ✅ Make sure it's imported
 import { useSettings } from './contexts/SettingsContext';
 
-// 🔐 Stripe publishable key from .env (Vite syntax)
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_yourKeyHere');
 
 interface Translations {
@@ -46,7 +46,6 @@ const TRANSLATIONS: Record<string, Translations> = {
     logout: 'Logout',
     loginRequired: 'Please login first'
   },
-  // ... other languages
 };
 
 function App() {
@@ -81,7 +80,7 @@ function App() {
       return;
     }
 
-    if (!isAuthenticated && tab !== 'login') {
+    if (!isAuthenticated && tab !== 'login' && tab !== 'signup') {
       setShowLoginPrompt(true);
       setActiveTab('login');
       return;
@@ -102,7 +101,17 @@ function App() {
           <LoginForm 
             onLoginSuccess={handleLoginSuccess} 
             onForgotPassword={() => {}} 
-            onSignUp={() => {}}
+            onSignUp={() => setActiveTab('signup')} // ✅ switch to register
+          />
+        </div>
+      );
+    }
+
+    if (activeTab === 'signup') {
+      return (
+        <div className="p-4">
+          <RegisterForm 
+            onRegisterSuccess={() => setActiveTab('login')} // ✅ switch back to login
           />
         </div>
       );
