@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, DollarSign, User, Users, ArrowLeft, Building2, Coffee, Music, Utensils, Palette, Search as SearchIcon, X, Calendar, Info, Check, CreditCard, ChevronDown, Sun, Moon, Plane, AlertCircle } from 'lucide-react';
+import { Search, DollarSign, User, Users, ArrowLeft, Coffee, Music, Utensils, Palette, Search as SearchIcon, X, Calendar, Info, Check, CreditCard, ChevronDown, Sun, Moon, Plane, AlertCircle } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import DestinationCard from './DestinationCard';
 import DestinationDetails from './DestinationDetails';
@@ -18,12 +18,7 @@ const TRANSLATIONS = {
     maxPrice: 'Max price',
     individual: 'Individual',
     group: 'Group',
-    company: 'For Companies',
     backToDestinations: 'Back to Destinations',
-    corporateEvents: 'Corporate Events',
-    teamBuilding: 'Team Building',
-    congressTickets: 'Congress Tickets',
-    upcomingCongresses: 'Upcoming Congresses',
     shortTrips: 'Short Trips & Excursions',
     dayTrips: 'Day Trips',
     weekendEscapes: 'Weekend Escapes',
@@ -70,8 +65,7 @@ const ExploreSection: React.FC<ExploreProps> = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDestination, setSelectedDestination] = useState<string | null>(null);
   const [selectedDestinationDetails, setSelectedDestinationDetails] = useState<DestinationDetailsData | null>(null);
-  const [visitType, setVisitType] = useState<'individual' | 'group' | 'company'>('individual');
-  const [businessCategory, setBusinessCategory] = useState<'events' | 'team_building' | 'congress' | null>(null);
+  const [visitType, setVisitType] = useState<'individual' | 'group'>('individual');
   const [activeSection, setActiveSection] = useState<'short-trips' | 'destinations' | 'local' | 'balkan-trips' | 'montenegro-tours' | 'petra-tours'>('destinations');
   const [selectedTripType, setSelectedTripType] = useState<string | null>(null);
   const [destinations, setDestinations] = useState<any[]>([]);
@@ -245,17 +239,6 @@ const ExploreSection: React.FC<ExploreProps> = () => {
             >
               <Users className="h-4 w-4" />
               {t.group}
-            </button>
-            <button
-              onClick={() => setVisitType('company')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
-                visitType === 'company'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
-            >
-              <Building2 className="h-4 w-4" />
-              {t.company}
             </button>
           </div>
         </div>
