@@ -12,8 +12,11 @@ import MessagesScreen from './components/messages/MessagesScreen';
 import SettingsScreen from './components/settings/SettingsScreen';
 import NetworkingScreen from './components/networking/NetworkingScreen';
 import PremiumSection from './components/premium/PremiumSection';
+
 import LoginForm from './components/auth/LoginForm';
-import RegisterForm from './components/auth/RegisterForm'; // ✅ Make sure it's imported
+import RegisterForm from './components/auth/RegisterForm';
+import ForgotPasswordForm from './components/auth/ForgotPasswordForm';
+
 import { useSettings } from './contexts/SettingsContext';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_yourKeyHere');
@@ -50,7 +53,7 @@ const TRANSLATIONS: Record<string, Translations> = {
 
 function App() {
   const { settings } = useSettings();
-  const [activeTab, setActiveTab] = useState('login');
+  const [activeTab, setActiveTab] = useState<'login' | 'signup' | 'forgot' | string>('login');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
@@ -80,7 +83,7 @@ function App() {
       return;
     }
 
-    if (!isAuthenticated && tab !== 'login' && tab !== 'signup') {
+    if (!isAuthenticated && tab !== 'login' && tab !== 'signup' && tab !== 'forgot') {
       setShowLoginPrompt(true);
       setActiveTab('login');
       return;
@@ -98,10 +101,10 @@ function App() {
               {TRANSLATIONS.en.loginRequired}
             </div>
           )}
-          <LoginForm 
-            onLoginSuccess={handleLoginSuccess} 
-            onForgotPassword={() => {}} 
-            onSignUp={() => setActiveTab('signup')} // ✅ switch to register
+          <LoginForm
+            onLoginSuccess={handleLoginSuccess}
+            onForgotPassword={() => setActiveTab('forgot')}
+            onSignUp={() => setActiveTab('signup')}
           />
         </div>
       );
@@ -110,9 +113,15 @@ function App() {
     if (activeTab === 'signup') {
       return (
         <div className="p-4">
-          <RegisterForm 
-            onRegisterSuccess={() => setActiveTab('login')} // ✅ switch back to login
-          />
+          <RegisterForm onRegisterSuccess={() => setActiveTab('login')} />
+        </div>
+      );
+    }
+
+    if (activeTab === 'forgot') {
+      return (
+        <div className="p-4">
+          <ForgotPasswordForm onBackToLogin={() => setActiveTab('login')} />
         </div>
       );
     }
@@ -134,7 +143,7 @@ function App() {
     <Router>
       <Elements stripe={stripePromise}>
         <div className={`min-h-screen ${settings.appearance.darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
-          <Navigation 
+          <Navigation
             activeTab={activeTab}
             setActiveTab={handleTabChange}
             darkMode={settings.appearance.darkMode}
