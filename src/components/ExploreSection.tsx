@@ -61,7 +61,7 @@ interface DestinationDetailsData {
 
 const ExploreSection: React.FC<ExploreProps> = () => {
   const { settings } = useSettings();
-  const [maxPrice, setMaxPrice] = useState<number>(300);
+  const [maxPrice, setMaxPrice] = useState<number>(3000);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDestination, setSelectedDestination] = useState<string | null>(null);
   const [selectedDestinationDetails, setSelectedDestinationDetails] = useState<DestinationDetailsData | null>(null);
