@@ -81,22 +81,18 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
   const [bookingDetails, setBookingDetails] = useState<AttractionBooking | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
 
-  // Authentication check and fetch bookings
   useEffect(() => {
     const fetchUserAndBookings = async () => {
       try {
         const token = localStorage.getItem('token');
         
-        // Fetch user
         const userRes = await fetch('http://127.0.0.1:8000/api/auth/user', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
         const userData = await userRes.json();
-        console.log('✅ Authenticated user (DestinationDetails):', userData);
 
-        // Fetch bookings
         const bookingsRes = await fetch('http://127.0.0.1:8000/api/auth/attraction/bookings', {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -106,7 +102,7 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
         const ids = bookingsData.map((b: any) => b.attraction.id);
         setBookedAttractionIds(ids);
       } catch (err) {
-        console.error('❌ Error fetching user or booked attractions:', err);
+        console.error('Error fetching user or booked attractions:', err);
       }
     };
 
@@ -178,47 +174,52 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
   };
 
   const handleBookNow = async (attraction: Attraction) => {
-  try {
-    const token = localStorage.getItem('token');
-    const participants = groupSize || 1;
+    try {
+      const token = localStorage.getItem('token');
+      const participants = groupSize || 1;
 
-    const res = await fetch(`http://127.0.0.1:8000/api/auth/attraction/book/${attraction.id}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ participants }),
-    });
+      const res = await fetch(`http://127.0.0.1:8000/api/auth/attraction/book/${attraction.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ participants }),
+      });
 
-    const bookingData = await res.json();
+      const bookingData = await res.json();
 
-    // 🛑 Booking already exists and paid
-    if (bookingData.already_paid) {
-      alert('You have already booked and paid for this attraction.');
-      return;
+      if (bookingData.already_paid) {
+        setBookingDetails({
+          attraction,
+          status: 'paid',
+          participants: bookingData.participants || participants,
+          booking_date: bookingData.booking_date || new Date().toISOString(),
+        });
+        setShowBookingModal(true);
+        return;
+      }
+
+      setBookingId(bookingData.booking_id);
+
+      const paymentRes = await fetch(`http://127.0.0.1:8000/api/auth/attraction/payment/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ booking_id: bookingData.booking_id }),
+      });
+
+      const paymentData = await paymentRes.json();
+      setClientSecret(paymentData.clientSecret);
+
+      setSelectedAttraction(attraction);
+      setShowPayment(true);
+    } catch (error) {
+      console.error('Booking or payment error:', error);
     }
-
-    setBookingId(bookingData.booking_id);
-
-    const paymentRes = await fetch(`http://127.0.0.1:8000/api/auth/attraction/payment/create`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ booking_id: bookingData.booking_id }),
-    });
-
-    const paymentData = await paymentRes.json();
-    setClientSecret(paymentData.clientSecret);
-
-    setSelectedAttraction(attraction);
-    setShowPayment(true);
-  } catch (error) {
-    console.error('Booking or payment error:', error);
-  }
-};
+  };
 
   const filteredAttractions = attractions.filter(attraction => 
     (visitType === 'group' && attraction.groupPrice ? attraction.groupPrice : attraction.price) <= maxPrice
@@ -343,7 +344,6 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
                   </div>
                 )}
 
-                {/* Key Highlights Section */}
                 <div className="mt-4 p-3 bg-purple-50 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <Star className="h-4 w-4 text-purple-600" />
@@ -361,13 +361,13 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
 
                 <div className="flex items-center justify-between mt-4">
                   <span className="text-purple-600 font-semibold">
-                  {visitType === 'group' && attraction.groupPrice && groupSize >= minGroupSize
-                    ? `€${(attraction.groupPrice * groupSize).toFixed(2)} `
-                    : `€${attraction.price.toFixed(2)}`}
-                  {visitType === 'group' && attraction.groupPrice && groupSize >= minGroupSize && (
-                    <span className="text-sm text-gray-500"> (€{attraction.groupPrice} per person)</span>
-                  )}
-                </span>
+                    {visitType === 'group' && attraction.groupPrice && groupSize >= minGroupSize
+                      ? `€${(attraction.groupPrice * groupSize).toFixed(2)} `
+                      : `€${attraction.price.toFixed(2)}`}
+                    {visitType === 'group' && attraction.groupPrice && groupSize >= minGroupSize && (
+                      <span className="text-sm text-gray-500"> (€{attraction.groupPrice} per person)</span>
+                    )}
+                  </span>
                   {bookedAttractionIds.includes(attraction.id) ? (
                     <button
                       onClick={() => {
@@ -408,7 +408,6 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
         </div>
       )}
 
-      {/* Stripe Payment Modal */}
       {showPayment && clientSecret && (
         <Elements stripe={stripePromise} options={{ clientSecret }}>
           <AttractionPaymentModal
@@ -419,7 +418,6 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
         </Elements>
       )}
 
-      {/* Booking Details Modal */}
       {showBookingModal && bookingDetails && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-xl w-full max-w-lg">
