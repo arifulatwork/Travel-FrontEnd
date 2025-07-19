@@ -2,8 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Plane } from 'lucide-react';
 import TripCard from './TripCard';
 import TripDetails from './TripDetails';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
+import BalkanTripPaymentModal from './BalkanTripPaymentModal';
 
 const BASE_URL = 'http://127.0.0.1:8000';
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_...');
 
 interface BalkanTrip {
   id: number;
@@ -39,6 +43,9 @@ const BalkanTripsSection: React.FC = () => {
   const [trips, setTrips] = useState<BalkanTrip[]>([]);
   const [selectedTrip, setSelectedTrip] = useState<BalkanTrip | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [bookingId, setBookingId] = useState<number | null>(null);
 
   useEffect(() => {
     fetch(`${BASE_URL}/api/balkan-trips`)
@@ -53,10 +60,31 @@ const BalkanTripsSection: React.FC = () => {
       });
   }, []);
 
-  const handleBook = () => {
-    if (selectedTrip) {
-      console.log('Booking:', selectedTrip.slug);
-      // Implement your booking or Stripe payment modal here
+  const handleBook = async () => {
+    if (!selectedTrip) return;
+
+    try {
+      const res = await fetch(`${BASE_URL}/api/auth/balkan-trip/book`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ balkan_trip_id: selectedTrip.id })
+      });
+
+      const data = await res.json();
+
+      if (data.client_secret) {
+        setClientSecret(data.client_secret);
+        setBookingId(data.booking_id);
+        setShowPaymentModal(true);
+      } else {
+        alert('Failed to create booking. Please try again.');
+      }
+    } catch (err) {
+      console.error('Booking error:', err);
+      alert('Something went wrong.');
     }
   };
 
@@ -93,6 +121,20 @@ const BalkanTripsSection: React.FC = () => {
           included={selectedTrip.included}
           onBook={handleBook}
         />
+
+        {showPaymentModal && clientSecret && bookingId && (
+          <Elements stripe={stripePromise} options={{ clientSecret }}>
+            <BalkanTripPaymentModal
+              clientSecret={clientSecret}
+              bookingId={bookingId}
+              onClose={() => {
+                setShowPaymentModal(false);
+                setClientSecret(null);
+                setBookingId(null);
+              }}
+            />
+          </Elements>
+        )}
       </div>
     );
   }
