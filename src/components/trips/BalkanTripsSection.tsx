@@ -4,8 +4,8 @@ import TripCard from './TripCard';
 import TripDetails from './TripDetails';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
-import BalkanTripPaymentModal from './BalkanTripPaymentModal';
-import BalkanTripBookingDetailsModal from './BalkanTripBookingDetailsModal';
+import BalkanTripPaymentModal from './balkan/BalkanTripPaymentModal';
+import BalkanTripBookingDetailsModal from './balkan/BalkanTripBookingDetailsModal';
 
 const BASE_URL = 'http://127.0.0.1:8000';
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_...');
