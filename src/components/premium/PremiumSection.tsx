@@ -53,6 +53,11 @@ interface ApiResponse<T> {
   message?: string;
 }
 
+interface SubscriptionStatus {
+  active: boolean;
+  expires_at?: string;
+}
+
 const iconMap: Record<string, React.ComponentType<any>> = {
   Crown, Check, Star, Globe, Shield, Gift, Clock, MessageCircle,
   Ticket, Building2, Camera, Utensils, MapPin, Calendar, Tag,
@@ -130,15 +135,53 @@ const PremiumSection: React.FC = () => {
     fetchData();
   }, [activeTab]);
 
+  const checkSubscriptionStatus = async (): Promise<SubscriptionStatus> => {
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/auth/subscriptions/status', {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!res.ok) {
+        return { active: false };
+      }
+
+      const result = await res.json();
+
+      if (result.success && result.active) {
+        return {
+          active: true,
+          expires_at: result.expires_at
+        };
+      }
+
+      return { active: false };
+    } catch (err) {
+      console.error('Error checking subscription status:', err);
+      return { active: false };
+    }
+  };
+
   const handleSupportAccess = () => {
     navigate('/messages?openSupport=true');
   };
 
-  const handleSubscribe = (tier: PricingTier) => {
+  const handleSubscribe = async (tier: PricingTier) => {
     if (!tier?.id) {
       alert('Invalid subscription tier');
       return;
     }
+
+    const status = await checkSubscriptionStatus();
+
+    if (status.active) {
+      alert(`You are already subscribed. Your subscription ends on ${new Date(status.expires_at || '').toLocaleDateString()}`);
+      return;
+    }
+
     setSelectedTier(tier);
     setShowPaymentModal(true);
   };
