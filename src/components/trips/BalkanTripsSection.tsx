@@ -46,6 +46,23 @@ const BalkanTripsSection: React.FC = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [bookingId, setBookingId] = useState<number | null>(null);
+  const [bookedTripIds, setBookedTripIds] = useState<number[]>([]);
+
+  const fetchBookings = async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/api/auth/balkan-trip/my-bookings`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setBookedTripIds(data);
+      }
+    } catch (error) {
+      console.warn('Could not fetch booked trip IDs (unauthenticated?)');
+    }
+  };
 
   useEffect(() => {
     fetch(`${BASE_URL}/api/balkan-trips`)
@@ -58,6 +75,9 @@ const BalkanTripsSection: React.FC = () => {
         console.error('Failed to fetch balkan trips', err);
         setLoading(false);
       });
+
+    // Fetch user bookings
+    fetchBookings();
   }, []);
 
   const handleBook = async () => {
@@ -93,6 +113,8 @@ const BalkanTripsSection: React.FC = () => {
   }
 
   if (selectedTrip) {
+    const isBooked = bookedTripIds.includes(selectedTrip.id);
+    
     return (
       <div className="p-4">
         <button
@@ -120,6 +142,7 @@ const BalkanTripsSection: React.FC = () => {
           }))}
           included={selectedTrip.included}
           onBook={handleBook}
+          isBooked={isBooked}
         />
 
         {showPaymentModal && clientSecret && bookingId && (
@@ -131,6 +154,8 @@ const BalkanTripsSection: React.FC = () => {
                 setShowPaymentModal(false);
                 setClientSecret(null);
                 setBookingId(null);
+                // Refresh bookings after payment
+                fetchBookings();
               }}
             />
           </Elements>
@@ -152,23 +177,28 @@ const BalkanTripsSection: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {trips.map((trip) => (
-          <TripCard
-            key={trip.slug}
-            title={trip.title}
-            description={trip.description}
-            durationDays={parseInt(trip.duration)}
-            price={trip.price}
-            image={getFullImageUrl(trip.image_url)}
-            maxParticipants={trip.group_size.max}
-            highlights={trip.itinerary.slice(0, 2).map((i) => ({
-              time: '',
-              activity: i.title,
-              description: i.description
-            }))}
-            onClick={() => setSelectedTrip(trip)}
-          />
-        ))}
+        {trips.map((trip) => {
+          const isBooked = bookedTripIds.includes(trip.id);
+
+          return (
+            <TripCard
+              key={trip.slug}
+              title={trip.title}
+              description={trip.description}
+              durationDays={parseInt(trip.duration)}
+              price={trip.price}
+              image={getFullImageUrl(trip.image_url)}
+              maxParticipants={trip.group_size.max}
+              highlights={trip.itinerary.slice(0, 2).map((i) => ({
+                time: '',
+                activity: i.title,
+                description: i.description
+              }))}
+              onClick={() => setSelectedTrip(trip)}
+              isBooked={isBooked}
+            />
+          );
+        })}
       </div>
     </div>
   );
