@@ -5,6 +5,7 @@ import TripDetails from './TripDetails';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import BalkanTripPaymentModal from './BalkanTripPaymentModal';
+import BalkanTripBookingDetailsModal from './BalkanTripBookingDetailsModal';
 
 const BASE_URL = 'http://127.0.0.1:8000';
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_...');
@@ -47,6 +48,7 @@ const BalkanTripsSection: React.FC = () => {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [bookingId, setBookingId] = useState<number | null>(null);
   const [bookedTripIds, setBookedTripIds] = useState<number[]>([]);
+  const [viewBookingId, setViewBookingId] = useState<number | null>(null);
 
   const fetchBookings = async () => {
     try {
@@ -143,6 +145,7 @@ const BalkanTripsSection: React.FC = () => {
           included={selectedTrip.included}
           onBook={handleBook}
           isBooked={isBooked}
+          onViewDetails={() => setViewBookingId(selectedTrip.id)}
         />
 
         {showPaymentModal && clientSecret && bookingId && (
@@ -159,6 +162,13 @@ const BalkanTripsSection: React.FC = () => {
               }}
             />
           </Elements>
+        )}
+
+        {viewBookingId && (
+          <BalkanTripBookingDetailsModal
+            bookingId={viewBookingId}
+            onClose={() => setViewBookingId(null)}
+          />
         )}
       </div>
     );
