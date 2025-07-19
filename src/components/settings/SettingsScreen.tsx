@@ -176,11 +176,11 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ settings, onSettingsCha
               className="w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             >
               <option value="en">English</option>
-              <option value="es">Español</option>
+              {/* <option value="es">Español</option>
               <option value="fr">Français</option>
               <option value="de">Deutsch</option>
               <option value="it">Italiano</option>
-              <option value="pt">Português</option>
+              <option value="pt">Português</option> */}
             </select>
           </div>
 
@@ -192,11 +192,11 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ settings, onSettingsCha
               className="w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             >
               <option value="EUR">Euro (EUR)</option>
-              <option value="USD">US Dollar (USD)</option>
+              {/* <option value="USD">US Dollar (USD)</option>
               <option value="GBP">British Pound (GBP)</option>
               <option value="JPY">Japanese Yen (JPY)</option>
               <option value="AUD">Australian Dollar (AUD)</option>
-              <option value="CAD">Canadian Dollar (CAD)</option>
+              <option value="CAD">Canadian Dollar (CAD)</option> */}
             </select>
           </div>
 
