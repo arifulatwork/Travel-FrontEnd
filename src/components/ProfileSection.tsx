@@ -26,6 +26,15 @@ interface Profile {
   };
 }
 
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+  type: 'info' | 'warning' | 'success' | 'error';
+}
+
 interface Question {
   id: string;
   text: string;
@@ -249,6 +258,36 @@ const TravelPersonaQuiz: React.FC<{
   );
 };
 
+const NotificationItem: React.FC<{ 
+  notification: Notification;
+  onClose: () => void;
+}> = ({ notification, onClose }) => {
+  const getTypeColor = () => {
+    switch (notification.type) {
+      case 'info': return 'text-blue-600 bg-blue-50';
+      case 'warning': return 'text-yellow-600 bg-yellow-50';
+      case 'success': return 'text-green-600 bg-green-50';
+      case 'error': return 'text-red-600 bg-red-50';
+      default: return 'text-gray-600 bg-gray-50';
+    }
+  };
+
+  return (
+    <div className={`p-4 rounded-lg mb-4 ${getTypeColor()}`}>
+      <div className="flex justify-between items-start">
+        <h4 className="font-medium">{notification.title}</h4>
+        <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+      <p className="mt-2 text-sm">{notification.message}</p>
+      <p className="mt-2 text-xs opacity-70">
+        {new Date(notification.createdAt).toLocaleString()}
+      </p>
+    </div>
+  );
+};
+
 const ProfileSection: React.FC = () => {
   const [profile, setProfile] = useState<Profile>({
     id: '',
@@ -270,6 +309,8 @@ const ProfileSection: React.FC = () => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [showPersonaQuiz, setShowPersonaQuiz] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
@@ -317,6 +358,35 @@ const ProfileSection: React.FC = () => {
             travelPersona: prefData.travel_persona || {},
           },
         }));
+
+        // Get notifications (mock data for this example)
+        const mockNotifications: Notification[] = [
+          {
+            id: '1',
+            title: 'Welcome to TravelApp!',
+            message: 'Thank you for signing up. Start exploring amazing destinations now!',
+            isRead: false,
+            createdAt: new Date().toISOString(),
+            type: 'info'
+          },
+          {
+            id: '2',
+            title: 'Special Offer',
+            message: 'Get 20% off your first booking with code WELCOME20',
+            isRead: false,
+            createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+            type: 'success'
+          },
+          {
+            id: '3',
+            title: 'Payment Successful',
+            message: 'Your payment for Paris trip has been processed successfully',
+            isRead: true,
+            createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+            type: 'success'
+          }
+        ];
+        setNotifications(mockNotifications);
       } catch (err) {
         console.error('Error fetching profile data:', err);
       } finally {
@@ -328,55 +398,56 @@ const ProfileSection: React.FC = () => {
   }, []);
 
   const handleAddCard = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  const { number, expiry, cvc } = cardFormData;
+    const { number, expiry, cvc } = cardFormData;
 
-  if (number.length !== 16) {
-    setCardError('Card number must be 16 digits');
-    return;
-  }
-
-  if (expiry.length !== 5) {
-    setCardError('Please enter a valid expiry date (MM/YY)');
-    return;
-  }
-
-  if (cvc.length < 3) {
-    setCardError('CVC must be at least 3 digits');
-    return;
-  }
-
-  const last4 = number.slice(-4);
-  const type = number.startsWith('4') ? 'visa' : 'mastercard'; // Very simple check
-
-  try {
-    const response = await fetch('http://127.0.0.1:8000/api/auth/credit-cards', {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({
-        last4,
-        expiry,
-        type
-      }),
-    });
-
-    if (response.ok) {
-      const updatedCards = await fetch('http://127.0.0.1:8000/api/auth/credit-cards', {
-        headers: getAuthHeaders(),
-      }).then(res => res.json());
-      setCards(updatedCards);
-      setShowAddCard(false);
-      setCardFormData({ number: '', expiry: '', cvc: '' });
-      setCardError('');
-    } else {
-      setCardError('Failed to add card');
+    if (number.length !== 16) {
+      setCardError('Card number must be 16 digits');
+      return;
     }
-  } catch (err) {
-    setCardError('Error adding card. Please try again.');
-    console.error('Error adding card:', err);
-  }
-};
+
+    if (expiry.length !== 5) {
+      setCardError('Please enter a valid expiry date (MM/YY)');
+      return;
+    }
+
+    if (cvc.length < 3) {
+      setCardError('CVC must be at least 3 digits');
+      return;
+    }
+
+    const last4 = number.slice(-4);
+    const type = number.startsWith('4') ? 'visa' : 'mastercard'; // Very simple check
+
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/auth/credit-cards', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          last4,
+          expiry,
+          type
+        }),
+      });
+
+      if (response.ok) {
+        const updatedCards = await fetch('http://127.0.0.1:8000/api/auth/credit-cards', {
+          headers: getAuthHeaders(),
+        }).then(res => res.json());
+        setCards(updatedCards);
+        setShowAddCard(false);
+        setCardFormData({ number: '', expiry: '', cvc: '' });
+        setCardError('');
+      } else {
+        setCardError('Failed to add card');
+      }
+    } catch (err) {
+      setCardError('Error adding card. Please try again.');
+      console.error('Error adding card:', err);
+    }
+  };
+
   const setDefaultCard = async (cardId: string) => {
     try {
       await fetch(`http://127.0.0.1:8000/api/credit-cards/${cardId}/default`, {
@@ -432,6 +503,27 @@ const ProfileSection: React.FC = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     window.location.reload();
+  };
+
+  const toggleNotifications = () => {
+    if (activeSection === 'notifications') {
+      setActiveSection(null);
+      setSelectedNotification(null);
+    } else {
+      setActiveSection('notifications');
+    }
+  };
+
+  const handleNotificationClick = (notification: Notification) => {
+    setSelectedNotification(notification);
+    // Mark as read in a real app
+    setNotifications(prev => prev.map(n => 
+      n.id === notification.id ? { ...n, isRead: true } : n
+    ));
+  };
+
+  const closeNotificationDetail = () => {
+    setSelectedNotification(null);
   };
 
   if (isLoading) {
@@ -612,14 +704,68 @@ const ProfileSection: React.FC = () => {
           </div>
           <div 
             className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
-            onClick={() => setActiveSection('notifications')}
+            onClick={toggleNotifications}
           >
             <div className="flex items-center space-x-3">
-              <Bell className="text-gray-600" />
+              <div className="relative">
+                <Bell className="text-gray-600" />
+                {notifications.some(n => !n.isRead) && (
+                  <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500"></span>
+                )}
+              </div>
               <span>Notifications</span>
             </div>
-            <ChevronRight className="text-gray-400" />
+            <ChevronRight className={`text-gray-400 transition-transform ${
+              activeSection === 'notifications' ? 'rotate-90' : ''
+            }`} />
           </div>
+          
+          {/* Notifications Section */}
+          {activeSection === 'notifications' && (
+            <div className="mt-2 ml-10 bg-gray-50 rounded-lg p-4">
+              {selectedNotification ? (
+                <NotificationItem 
+                  notification={selectedNotification} 
+                  onClose={closeNotificationDetail}
+                />
+              ) : (
+                <>
+                  <h4 className="font-medium mb-3">Your Notifications</h4>
+                  {notifications.length === 0 ? (
+                    <p className="text-gray-500 text-sm">No notifications yet</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {notifications.map(notification => (
+                        <div 
+                          key={notification.id}
+                          onClick={() => handleNotificationClick(notification)}
+                          className={`p-3 rounded-lg cursor-pointer ${
+                            notification.isRead ? 'bg-white' : 'bg-purple-50'
+                          } border ${
+                            notification.isRead ? 'border-gray-200' : 'border-purple-200'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start">
+                            <h5 className="font-medium">{notification.title}</h5>
+                            {!notification.isRead && (
+                              <span className="h-2 w-2 rounded-full bg-purple-600 mt-1.5"></span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600 mt-1 truncate">
+                            {notification.message}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {new Date(notification.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
           <div 
             className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
             onClick={() => setActiveSection('privacy')}
