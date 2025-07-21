@@ -176,11 +176,11 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ settings, onSettingsCha
               className="w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             >
               <option value="en">English</option>
-              {/* <option value="es">Español</option>
+              <option value="es">Español</option>
               <option value="fr">Français</option>
               <option value="de">Deutsch</option>
               <option value="it">Italiano</option>
-              <option value="pt">Português</option> */}
+              <option value="pt">Português</option>
             </select>
           </div>
 
@@ -192,11 +192,11 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ settings, onSettingsCha
               className="w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             >
               <option value="EUR">Euro (EUR)</option>
-              {/* <option value="USD">US Dollar (USD)</option>
+              <option value="USD">US Dollar (USD)</option>
               <option value="GBP">British Pound (GBP)</option>
               <option value="JPY">Japanese Yen (JPY)</option>
               <option value="AUD">Australian Dollar (AUD)</option>
-              <option value="CAD">Canadian Dollar (CAD)</option> */}
+              <option value="CAD">Canadian Dollar (CAD)</option>
             </select>
           </div>
 
@@ -269,17 +269,17 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ settings, onSettingsCha
   ];
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6 dark:text-white">Settings</h2>
-      
-      <div className="space-y-6">
-        {sections.map((section) => (
-          <div key={section.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
-            <div className="p-6">
-              <div className="flex items-center space-x-3 mb-4">
-                <section.icon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                <h3 className="text-lg font-semibold dark:text-white">{section.title}</h3>
-              </div>
+    <div className="max-w-2xl mx-auto px-2 sm:px-4 md:px-6 py-4">
+      <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4 md:mb-6">Settings</h2>
+      <div className="space-y-3 sm:space-y-4 md:space-y-6">
+        {sections.map(section => (
+          <div key={section.id} className="bg-white rounded-xl shadow-sm p-3 sm:p-4 md:p-6">
+            <div className="flex items-center gap-2 mb-1 sm:mb-2 md:mb-4">
+              <section.icon className="text-purple-600" />
+              <h3 className="font-semibold text-base sm:text-lg md:text-xl">{section.title}</h3>
+            </div>
+            {/* Responsive content */}
+            <div className="text-xs sm:text-sm md:text-base">
               {section.content}
             </div>
           </div>

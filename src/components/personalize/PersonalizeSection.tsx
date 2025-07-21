@@ -85,22 +85,22 @@ const PersonalizeSection: React.FC<PersonalizeSectionProps> = ({ onPreferencesUp
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {/* Success Message */}
       {showSuccess && (
-        <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in-out flex items-center gap-2">
+        <div className="fixed top-4 right-2 left-2 sm:right-4 sm:left-auto bg-green-500 text-white px-4 sm:px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in-out flex items-center gap-2 text-xs sm:text-sm">
           <Check className="h-5 w-5" />
           <span>Preferences saved successfully!</span>
         </div>
       )}
 
       {/* Climate Preferences */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
-        <div className="flex items-center gap-2 mb-4">
+      <div className="bg-white rounded-xl p-3 sm:p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-2 sm:mb-4">
           <Sun className="h-5 w-5 text-purple-600" />
-          <h3 className="text-lg font-semibold">Climate Preferences</h3>
+          <h3 className="text-base sm:text-lg font-semibold">Climate Preferences</h3>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
           {['Tropical', 'Mediterranean', 'Continental', 'Alpine'].map((climate) => (
             <button
               key={climate}
@@ -109,7 +109,7 @@ const PersonalizeSection: React.FC<PersonalizeSectionProps> = ({ onPreferencesUp
                   ? preferences.climate.filter(c => c !== climate)
                   : [...preferences.climate, climate]
               )}
-              className={`p-3 rounded-lg border ${
+              className={`p-2 sm:p-3 rounded-lg border text-xs sm:text-sm ${
                 preferences.climate.includes(climate)
                   ? 'bg-purple-50 border-purple-200 text-purple-700'
                   : 'border-gray-200 hover:bg-gray-50'
@@ -122,12 +122,12 @@ const PersonalizeSection: React.FC<PersonalizeSectionProps> = ({ onPreferencesUp
       </div>
 
       {/* Group Size */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
-        <div className="flex items-center gap-2 mb-4">
+      <div className="bg-white rounded-xl p-3 sm:p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-2 sm:mb-4">
           <Users className="h-5 w-5 text-purple-600" />
-          <h3 className="text-lg font-semibold">Preferred Group Size</h3>
+          <h3 className="text-base sm:text-lg font-semibold">Preferred Group Size</h3>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
           {[
             { value: 'solo', label: 'Solo' },
             { value: 'couple', label: 'Couple' },
@@ -137,7 +137,7 @@ const PersonalizeSection: React.FC<PersonalizeSectionProps> = ({ onPreferencesUp
             <button
               key={size.value}
               onClick={() => handlePreferenceChange('groupSize', size.value)}
-              className={`p-3 rounded-lg border ${
+              className={`p-2 sm:p-3 rounded-lg border text-xs sm:text-sm ${
                 preferences.groupSize === size.value
                   ? 'bg-purple-50 border-purple-200 text-purple-700'
                   : 'border-gray-200 hover:bg-gray-50'
@@ -150,12 +150,12 @@ const PersonalizeSection: React.FC<PersonalizeSectionProps> = ({ onPreferencesUp
       </div>
 
       {/* Travel Style */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
-        <div className="flex items-center gap-2 mb-4">
+      <div className="bg-white rounded-xl p-3 sm:p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-2 sm:mb-4">
           <MapPin className="h-5 w-5 text-purple-600" />
-          <h3 className="text-lg font-semibold">Travel Style</h3>
+          <h3 className="text-base sm:text-lg font-semibold">Travel Style</h3>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
           {[
             'Cultural',
             'Adventure',
@@ -171,7 +171,7 @@ const PersonalizeSection: React.FC<PersonalizeSectionProps> = ({ onPreferencesUp
                   ? preferences.travelStyle.filter(s => s !== style)
                   : [...preferences.travelStyle, style]
               )}
-              className={`p-3 rounded-lg border ${
+              className={`p-2 sm:p-3 rounded-lg border text-xs sm:text-sm ${
                 preferences.travelStyle.includes(style)
                   ? 'bg-purple-50 border-purple-200 text-purple-700'
                   : 'border-gray-200 hover:bg-gray-50'
@@ -184,12 +184,12 @@ const PersonalizeSection: React.FC<PersonalizeSectionProps> = ({ onPreferencesUp
       </div>
 
       {/* Budget Range */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
-        <div className="flex items-center gap-2 mb-4">
+      <div className="bg-white rounded-xl p-3 sm:p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-2 sm:mb-4">
           <DollarSign className="h-5 w-5 text-purple-600" />
-          <h3 className="text-lg font-semibold">Budget Range</h3>
+          <h3 className="text-base sm:text-lg font-semibold">Budget Range</h3>
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
           {[
             { value: 'budget', label: 'Budget-Friendly' },
             { value: 'moderate', label: 'Moderate' },
@@ -198,7 +198,7 @@ const PersonalizeSection: React.FC<PersonalizeSectionProps> = ({ onPreferencesUp
             <button
               key={budget.value}
               onClick={() => handlePreferenceChange('budget', budget.value)}
-              className={`p-3 rounded-lg border ${
+              className={`p-2 sm:p-3 rounded-lg border text-xs sm:text-sm ${
                 preferences.budget === budget.value
                   ? 'bg-purple-50 border-purple-200 text-purple-700'
                   : 'border-gray-200 hover:bg-gray-50'
@@ -211,12 +211,12 @@ const PersonalizeSection: React.FC<PersonalizeSectionProps> = ({ onPreferencesUp
       </div>
 
       {/* Season Preference */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
-        <div className="flex items-center gap-2 mb-4">
+      <div className="bg-white rounded-xl p-3 sm:p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-2 sm:mb-4">
           <Calendar className="h-5 w-5 text-purple-600" />
-          <h3 className="text-lg font-semibold">Preferred Seasons</h3>
+          <h3 className="text-base sm:text-lg font-semibold">Preferred Seasons</h3>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
           {['Spring', 'Summer', 'Fall', 'Winter'].map((season) => (
             <button
               key={season}
@@ -225,7 +225,7 @@ const PersonalizeSection: React.FC<PersonalizeSectionProps> = ({ onPreferencesUp
                   ? preferences.seasonPreference.filter(s => s !== season)
                   : [...preferences.seasonPreference, season]
               )}
-              className={`p-3 rounded-lg border ${
+              className={`p-2 sm:p-3 rounded-lg border text-xs sm:text-sm ${
                 preferences.seasonPreference.includes(season)
                   ? 'bg-purple-50 border-purple-200 text-purple-700'
                   : 'border-gray-200 hover:bg-gray-50'
@@ -238,12 +238,12 @@ const PersonalizeSection: React.FC<PersonalizeSectionProps> = ({ onPreferencesUp
       </div>
 
       {/* Activity Level */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
-        <div className="flex items-center gap-2 mb-4">
+      <div className="bg-white rounded-xl p-3 sm:p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-2 sm:mb-4">
           <Activity className="h-5 w-5 text-purple-600" />
-          <h3 className="text-lg font-semibold">Activity Level</h3>
+          <h3 className="text-base sm:text-lg font-semibold">Activity Level</h3>
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
           {[
             { value: 'relaxed', label: 'Relaxed' },
             { value: 'moderate', label: 'Moderate' },
@@ -252,7 +252,7 @@ const PersonalizeSection: React.FC<PersonalizeSectionProps> = ({ onPreferencesUp
             <button
               key={level.value}
               onClick={() => handlePreferenceChange('activityLevel', level.value)}
-              className={`p-3 rounded-lg border ${
+              className={`p-2 sm:p-3 rounded-lg border text-xs sm:text-sm ${
                 preferences.activityLevel === level.value
                   ? 'bg-purple-50 border-purple-200 text-purple-700'
                   : 'border-gray-200 hover:bg-gray-50'

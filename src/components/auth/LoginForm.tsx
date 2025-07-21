@@ -8,7 +8,8 @@ import {
   Paper,
   Divider,
   ThemeProvider,
-  createTheme
+  createTheme,
+  useMediaQuery
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
@@ -39,6 +40,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onForgotPassword,
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const isMobile = useMediaQuery('(max-width:600px)');
+  const isVerySmall = useMediaQuery('(max-width:400px)');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,9 +74,31 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onForgotPassword,
 
   return (
     <ThemeProvider theme={theme}>
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', p: 2 }}>
-        <StyledPaper elevation={3}>
-          <Typography variant="h4" component="h1" gutterBottom align="center" color="primary" sx={{ fontWeight: 'bold' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', width: isMobile ? '100vw' : 'auto', p: 0, m: 0 }}>
+        <StyledPaper
+          elevation={3}
+          sx={{
+            maxWidth: isMobile ? '100vw' : 400,
+            width: '100%',
+            minHeight: isMobile ? '100vh' : 'auto',
+            borderRadius: isVerySmall ? 0 : (isMobile ? 2 : 3),
+            p: isMobile ? 2 : 4,
+            boxSizing: 'border-box',
+            m: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <Typography
+            variant={isMobile ? 'h5' : 'h4'}
+            component="h1"
+            gutterBottom
+            align="center"
+            color="primary"
+            sx={{ fontWeight: 'bold', fontSize: isVerySmall ? '2rem' : undefined }}
+          >
             Welcome Back
           </Typography>
 

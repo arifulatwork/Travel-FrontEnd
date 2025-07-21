@@ -161,59 +161,56 @@ const TravelTipsSection = () => {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-8">
       {/* Quick Tips Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-purple-50 p-4 rounded-lg">
-          <div className="flex items-center space-x-2 mb-2">
-            <Map className="h-5 w-5 text-purple-600" />
-            <span className="font-medium">Download offline maps</span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+        <div className="bg-purple-50 p-2 sm:p-4 rounded-lg">
+          <div className="flex items-center space-x-1 sm:space-x-2 mb-1 sm:mb-2">
+            <Map className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+            <span className="font-medium text-xs sm:text-sm">Download offline maps</span>
           </div>
-          <p className="text-sm text-gray-600">Save maps for offline use before your trip</p>
+          <p className="text-xs sm:text-sm text-gray-600">Save maps for offline use before your trip</p>
         </div>
-        <div className="bg-purple-50 p-4 rounded-lg">
-          <div className="flex items-center space-x-2 mb-2">
-            <Sun className="h-5 w-5 text-purple-600" />
-            <span className="font-medium">Check weather</span>
+        <div className="bg-purple-50 p-2 sm:p-4 rounded-lg">
+          <div className="flex items-center space-x-1 sm:space-x-2 mb-1 sm:mb-2">
+            <Sun className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+            <span className="font-medium text-xs sm:text-sm">Check weather</span>
           </div>
-          <p className="text-sm text-gray-600">Pack according to the forecast</p>
+          <p className="text-xs sm:text-sm text-gray-600">Pack according to the forecast</p>
         </div>
-        <div className="bg-purple-50 p-4 rounded-lg">
-          <div className="flex items-center space-x-2 mb-2">
-            <Utensils className="h-5 w-5 text-purple-600" />
-            <span className="font-medium">Local food guide</span>
+        <div className="bg-purple-50 p-2 sm:p-4 rounded-lg">
+          <div className="flex items-center space-x-1 sm:space-x-2 mb-1 sm:mb-2">
+            <Utensils className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+            <span className="font-medium text-xs sm:text-sm">Local food guide</span>
           </div>
-          <p className="text-sm text-gray-600">Research local food recommendations</p>
+          <p className="text-xs sm:text-sm text-gray-600">Research local food recommendations</p>
         </div>
-        <div className="bg-purple-50 p-4 rounded-lg">
-          <div className="flex items-center space-x-2 mb-2">
-            <Lightbulb className="h-5 w-5 text-purple-600" />
-            <span className="font-medium">Power adapters</span>
+        <div className="bg-purple-50 p-2 sm:p-4 rounded-lg">
+          <div className="flex items-center space-x-1 sm:space-x-2 mb-1 sm:mb-2">
+            <Lightbulb className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+            <span className="font-medium text-xs sm:text-sm">Power adapters</span>
           </div>
-          <p className="text-sm text-gray-600">Check local power outlets and bring adapters</p>
+          <p className="text-xs sm:text-sm text-gray-600">Check local power outlets and bring adapters</p>
         </div>
       </div>
 
       {/* Insurance Section */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-          <Shield className="h-6 w-6 text-purple-600" />
-          Travel Insurance Options
+      <div className="bg-white rounded-xl shadow-sm p-2 sm:p-6">
+        <h2 className="text-base sm:text-xl font-bold mb-3 sm:mb-6 flex items-center gap-1 sm:gap-2">
+          <Shield className="h-5 w-5 text-purple-600" />
+          <span>Travel Insurance Options</span>
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {insuranceOptions.map((insurance, index) => (
-            <div key={index} className="border rounded-lg p-4">
-              <div className="flex items-center space-x-2 mb-4">
-                <insurance.icon className="h-5 w-5 text-purple-600" />
-                <h3 className="font-semibold text-lg">{insurance.type}</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
+          {insuranceOptions.map((option, idx) => (
+            <div key={idx} className="bg-purple-50 p-2 sm:p-4 rounded-lg">
+              <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
+                <option.icon className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+                <span className="font-medium text-xs sm:text-sm">{option.type}</span>
               </div>
-              <p className="text-gray-600 mb-4">{insurance.description}</p>
-              <ul className="space-y-2">
-                {insurance.coverage.map((item, i) => (
-                  <li key={i} className="flex items-center space-x-2 text-sm">
-                    <span className="text-purple-600">•</span>
-                    <span>{item}</span>
-                  </li>
+              <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2">{option.description}</p>
+              <ul className="list-disc list-inside text-xs sm:text-sm text-purple-700 space-y-1">
+                {option.coverage.map((item, i) => (
+                  <li key={i}>{item}</li>
                 ))}
               </ul>
             </div>
@@ -221,52 +218,46 @@ const TravelTipsSection = () => {
         </div>
       </div>
 
-      {/* Visa Requirements Section */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-          <Passport className="h-6 w-6 text-purple-600" />
-          Visa Requirements
+      {/* Visa Section */}
+      <div className="bg-white rounded-xl shadow-sm p-2 sm:p-6">
+        <h2 className="text-base sm:text-xl font-bold mb-3 sm:mb-6 flex items-center gap-1 sm:gap-2">
+          <Globe className="h-5 w-5 text-purple-600" />
+          <span>Visa & Legal Requirements</span>
         </h2>
-        <div className="space-y-6">
-          {visaRequirements.map((visa, index) => (
-            <div key={index} className="border rounded-lg p-4">
-              <div className="flex items-center space-x-2 mb-4">
-                <visa.icon className="h-5 w-5 text-purple-600" />
-                <h3 className="font-semibold text-lg">{visa.requirement}</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
+          {visaRequirements.map((visa, idx) => (
+            <div key={idx} className="bg-purple-50 p-2 sm:p-4 rounded-lg">
+              <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
+                <visa.icon className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+                <span className="font-medium text-xs sm:text-sm">{visa.requirement}</span>
               </div>
-              <p className="text-gray-600 mb-4">{visa.description}</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2">{visa.description}</p>
+              <ul className="list-disc list-inside text-xs sm:text-sm text-purple-700 space-y-1">
                 {visa.documents.map((doc, i) => (
-                  <div key={i} className="flex items-center space-x-2 text-sm bg-gray-50 p-2 rounded">
-                    <FileCheck className="h-4 w-4 text-purple-600" />
-                    <span>{doc}</span>
-                  </div>
+                  <li key={i}>{doc}</li>
                 ))}
-              </div>
+              </ul>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Travel Tips Section */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-          <Lightbulb className="h-6 w-6 text-purple-600" />
-          Travel Tips & Tricks
+      {/* General Tips Section */}
+      <div className="bg-white rounded-xl shadow-sm p-2 sm:p-6">
+        <h2 className="text-base sm:text-xl font-bold mb-3 sm:mb-6 flex items-center gap-1 sm:gap-2">
+          <Lightbulb className="h-5 w-5 text-purple-600" />
+          <span>General Travel Tips</span>
         </h2>
-        <div className="space-y-6">
-          {tips.map((section, index) => (
-            <div key={index} className="border rounded-lg p-4">
-              <div className="flex items-center space-x-2 mb-4">
-                <section.icon className="h-5 w-5 text-purple-600" />
-                <h3 className="font-semibold text-lg">{section.category}</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
+          {tips.map((tip, idx) => (
+            <div key={idx} className="bg-purple-50 p-2 sm:p-4 rounded-lg">
+              <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
+                <tip.icon className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+                <span className="font-medium text-xs sm:text-sm">{tip.category}</span>
               </div>
-              <ul className="space-y-2">
-                {section.tips.map((tip, tipIndex) => (
-                  <li key={tipIndex} className="flex items-center space-x-2">
-                    <span className="text-purple-600 font-bold">•</span>
-                    <span className="text-gray-700">{tip}</span>
-                  </li>
+              <ul className="list-disc list-inside text-xs sm:text-sm text-purple-700 space-y-1">
+                {tip.tips.map((t, i) => (
+                  <li key={i}>{t}</li>
                 ))}
               </ul>
             </div>

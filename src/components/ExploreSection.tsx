@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, DollarSign, User, Users, ArrowLeft, Coffee, Music, Utensils, Palette, Search as SearchIcon, X, Calendar, Info, Check, CreditCard, ChevronDown, Sun, Moon, Plane, AlertCircle } from 'lucide-react';
+import { Search, DollarSign, User, Users, ArrowLeft, Building2, Coffee, Music, Utensils, Palette, Search as SearchIcon, X, Calendar, Info, Check, CreditCard, ChevronDown, Sun, Moon, Plane, AlertCircle } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import DestinationCard from './DestinationCard';
 import DestinationDetails from './DestinationDetails';
@@ -18,7 +18,12 @@ const TRANSLATIONS = {
     maxPrice: 'Max price',
     individual: 'Individual',
     group: 'Group',
+    company: 'For Companies',
     backToDestinations: 'Back to Destinations',
+    corporateEvents: 'Corporate Events',
+    teamBuilding: 'Team Building',
+    congressTickets: 'Congress Tickets',
+    upcomingCongresses: 'Upcoming Congresses',
     shortTrips: 'Short Trips & Excursions',
     dayTrips: 'Day Trips',
     weekendEscapes: 'Weekend Escapes',
@@ -61,11 +66,12 @@ interface DestinationDetailsData {
 
 const ExploreSection: React.FC<ExploreProps> = () => {
   const { settings } = useSettings();
-  const [maxPrice, setMaxPrice] = useState<number>(3000);
+  const [maxPrice, setMaxPrice] = useState<number>(300);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDestination, setSelectedDestination] = useState<string | null>(null);
   const [selectedDestinationDetails, setSelectedDestinationDetails] = useState<DestinationDetailsData | null>(null);
-  const [visitType, setVisitType] = useState<'individual' | 'group'>('individual');
+  const [visitType, setVisitType] = useState<'individual' | 'group' | 'company'>('individual');
+  const [businessCategory, setBusinessCategory] = useState<'events' | 'team_building' | 'congress' | null>(null);
   const [activeSection, setActiveSection] = useState<'short-trips' | 'destinations' | 'local' | 'balkan-trips' | 'montenegro-tours' | 'petra-tours'>('destinations');
   const [selectedTripType, setSelectedTripType] = useState<string | null>(null);
   const [destinations, setDestinations] = useState<any[]>([]);
@@ -183,16 +189,16 @@ const ExploreSection: React.FC<ExploreProps> = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="mb-6 flex justify-between items-center">
+    <div className="max-w-7xl mx-auto px-2 sm:px-4">
+      <div className="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t.exploreDestinations}</h1>
-          <p className="text-gray-600 dark:text-gray-300 mt-2">{t.findNextAdventure}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{t.exploreDestinations}</h1>
+          <p className="text-gray-600 dark:text-gray-300 mt-1 sm:mt-2 text-sm sm:text-base">{t.findNextAdventure}</p>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm mb-8">
-        <div className="flex flex-wrap gap-4">
+      <div className="bg-white dark:bg-gray-800 p-2 sm:p-4 rounded-xl shadow-sm mb-8">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-4">
           <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-3 top-2.5 text-gray-400" />
@@ -201,11 +207,11 @@ const ExploreSection: React.FC<ExploreProps> = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t.searchPlaceholder}
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-sm sm:text-base"
               />
             </div>
           </div>
-          <div className="w-64">
+          <div className="w-full sm:w-64">
             <div className="relative">
               <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
@@ -213,14 +219,14 @@ const ExploreSection: React.FC<ExploreProps> = () => {
                 placeholder={t.maxPrice}
                 value={maxPrice}
                 onChange={(e) => setMaxPrice(Number(e.target.value))}
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-sm sm:text-base"
               />
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-row flex-wrap gap-2">
             <button
               onClick={() => setVisitType('individual')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs sm:text-base ${
                 visitType === 'individual'
                   ? 'bg-purple-600 text-white'
                   : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -231,7 +237,7 @@ const ExploreSection: React.FC<ExploreProps> = () => {
             </button>
             <button
               onClick={() => setVisitType('group')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs sm:text-base ${
                 visitType === 'group'
                   ? 'bg-purple-600 text-white'
                   : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -240,15 +246,26 @@ const ExploreSection: React.FC<ExploreProps> = () => {
               <Users className="h-4 w-4" />
               {t.group}
             </button>
+            <button
+              onClick={() => setVisitType('company')}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs sm:text-base ${
+                visitType === 'company'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              <Building2 className="h-4 w-4" />
+              {t.company}
+            </button>
           </div>
         </div>
       </div>
 
       <div className="mb-8">
-        <div className="flex gap-4 border-b overflow-x-auto">
+        <div className="flex gap-2 sm:gap-4 border-b overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
           <button
             onClick={() => setActiveSection('short-trips')}
-            className={`px-4 py-2 font-medium whitespace-nowrap ${
+            className={`px-3 sm:px-4 py-2 font-medium whitespace-nowrap ${
               activeSection === 'short-trips'
                 ? 'text-purple-600 border-b-2 border-purple-600'
                 : 'text-gray-600 hover:text-gray-900'
@@ -258,7 +275,7 @@ const ExploreSection: React.FC<ExploreProps> = () => {
           </button>
           <button
             onClick={() => setActiveSection('destinations')}
-            className={`px-4 py-2 font-medium whitespace-nowrap ${
+            className={`px-3 sm:px-4 py-2 font-medium whitespace-nowrap ${
               activeSection === 'destinations'
                 ? 'text-purple-600 border-b-2 border-purple-600'
                 : 'text-gray-600 hover:text-gray-900'
@@ -268,7 +285,7 @@ const ExploreSection: React.FC<ExploreProps> = () => {
           </button>
           <button
             onClick={() => setActiveSection('local')}
-            className={`px-4 py-2 font-medium flex items-center gap-2 whitespace-nowrap ${
+            className={`px-3 sm:px-4 py-2 font-medium flex items-center gap-2 whitespace-nowrap ${
               activeSection === 'local'
                 ? 'text-purple-600 border-b-2 border-purple-600'
                 : 'text-gray-600 hover:text-gray-900'
@@ -279,7 +296,7 @@ const ExploreSection: React.FC<ExploreProps> = () => {
           </button>
           <button
             onClick={() => setActiveSection('balkan-trips')}
-            className={`px-4 py-2 font-medium flex items-center gap-2 whitespace-nowrap ${
+            className={`px-3 sm:px-4 py-2 font-medium flex items-center gap-2 whitespace-nowrap ${
               activeSection === 'balkan-trips'
                 ? 'text-purple-600 border-b-2 border-purple-600'
                 : 'text-gray-600 hover:text-gray-900'
@@ -290,7 +307,7 @@ const ExploreSection: React.FC<ExploreProps> = () => {
           </button>
           <button
             onClick={() => setActiveSection('montenegro-tours')}
-            className={`px-4 py-2 font-medium flex items-center gap-2 whitespace-nowrap ${
+            className={`px-3 sm:px-4 py-2 font-medium flex items-center gap-2 whitespace-nowrap ${
               activeSection === 'montenegro-tours'
                 ? 'text-purple-600 border-b-2 border-purple-600'
                 : 'text-gray-600 hover:text-gray-900'
@@ -301,7 +318,7 @@ const ExploreSection: React.FC<ExploreProps> = () => {
           </button>
           <button
             onClick={() => setActiveSection('petra-tours')}
-            className={`px-4 py-2 font-medium flex items-center gap-2 whitespace-nowrap ${
+            className={`px-3 sm:px-4 py-2 font-medium flex items-center gap-2 whitespace-nowrap ${
               activeSection === 'petra-tours'
                 ? 'text-purple-600 border-b-2 border-purple-600'
                 : 'text-gray-600 hover:text-gray-900'
@@ -320,7 +337,7 @@ const ExploreSection: React.FC<ExploreProps> = () => {
           searchQuery={searchQuery}
         />
       ) : activeSection === 'destinations' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {filteredDestinations.map((destination) => (
             <DestinationCard
               key={destination.id}

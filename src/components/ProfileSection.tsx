@@ -26,15 +26,6 @@ interface Profile {
   };
 }
 
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  isRead: boolean;
-  createdAt: string;
-  type: 'info' | 'warning' | 'success' | 'error';
-}
-
 interface Question {
   id: string;
   text: string;
@@ -258,36 +249,6 @@ const TravelPersonaQuiz: React.FC<{
   );
 };
 
-const NotificationItem: React.FC<{ 
-  notification: Notification;
-  onClose: () => void;
-}> = ({ notification, onClose }) => {
-  const getTypeColor = () => {
-    switch (notification.type) {
-      case 'info': return 'text-blue-600 bg-blue-50';
-      case 'warning': return 'text-yellow-600 bg-yellow-50';
-      case 'success': return 'text-green-600 bg-green-50';
-      case 'error': return 'text-red-600 bg-red-50';
-      default: return 'text-gray-600 bg-gray-50';
-    }
-  };
-
-  return (
-    <div className={`p-4 rounded-lg mb-4 ${getTypeColor()}`}>
-      <div className="flex justify-between items-start">
-        <h4 className="font-medium">{notification.title}</h4>
-        <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-          <X className="h-5 w-5" />
-        </button>
-      </div>
-      <p className="mt-2 text-sm">{notification.message}</p>
-      <p className="mt-2 text-xs opacity-70">
-        {new Date(notification.createdAt).toLocaleString()}
-      </p>
-    </div>
-  );
-};
-
 const ProfileSection: React.FC = () => {
   const [profile, setProfile] = useState<Profile>({
     id: '',
@@ -309,8 +270,6 @@ const ProfileSection: React.FC = () => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [showPersonaQuiz, setShowPersonaQuiz] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
@@ -358,35 +317,6 @@ const ProfileSection: React.FC = () => {
             travelPersona: prefData.travel_persona || {},
           },
         }));
-
-        // Get notifications (mock data for this example)
-        const mockNotifications: Notification[] = [
-          {
-            id: '1',
-            title: 'Welcome to TravelApp!',
-            message: 'Thank you for signing up. Start exploring amazing destinations now!',
-            isRead: false,
-            createdAt: new Date().toISOString(),
-            type: 'info'
-          },
-          {
-            id: '2',
-            title: 'Special Offer',
-            message: 'Get 20% off your first booking with code WELCOME20',
-            isRead: false,
-            createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-            type: 'success'
-          },
-          {
-            id: '3',
-            title: 'Payment Successful',
-            message: 'Your payment for Paris trip has been processed successfully',
-            isRead: true,
-            createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-            type: 'success'
-          }
-        ];
-        setNotifications(mockNotifications);
       } catch (err) {
         console.error('Error fetching profile data:', err);
       } finally {
@@ -398,56 +328,55 @@ const ProfileSection: React.FC = () => {
   }, []);
 
   const handleAddCard = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    const { number, expiry, cvc } = cardFormData;
+  const { number, expiry, cvc } = cardFormData;
 
-    if (number.length !== 16) {
-      setCardError('Card number must be 16 digits');
-      return;
-    }
+  if (number.length !== 16) {
+    setCardError('Card number must be 16 digits');
+    return;
+  }
 
-    if (expiry.length !== 5) {
-      setCardError('Please enter a valid expiry date (MM/YY)');
-      return;
-    }
+  if (expiry.length !== 5) {
+    setCardError('Please enter a valid expiry date (MM/YY)');
+    return;
+  }
 
-    if (cvc.length < 3) {
-      setCardError('CVC must be at least 3 digits');
-      return;
-    }
+  if (cvc.length < 3) {
+    setCardError('CVC must be at least 3 digits');
+    return;
+  }
 
-    const last4 = number.slice(-4);
-    const type = number.startsWith('4') ? 'visa' : 'mastercard'; // Very simple check
+  const last4 = number.slice(-4);
+  const type = number.startsWith('4') ? 'visa' : 'mastercard'; // Very simple check
 
-    try {
-      const response = await fetch('http://127.0.0.1:8000/api/auth/credit-cards', {
-        method: 'POST',
+  try {
+    const response = await fetch('http://127.0.0.1:8000/api/auth/credit-cards', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        last4,
+        expiry,
+        type
+      }),
+    });
+
+    if (response.ok) {
+      const updatedCards = await fetch('http://127.0.0.1:8000/api/auth/credit-cards', {
         headers: getAuthHeaders(),
-        body: JSON.stringify({
-          last4,
-          expiry,
-          type
-        }),
-      });
-
-      if (response.ok) {
-        const updatedCards = await fetch('http://127.0.0.1:8000/api/auth/credit-cards', {
-          headers: getAuthHeaders(),
-        }).then(res => res.json());
-        setCards(updatedCards);
-        setShowAddCard(false);
-        setCardFormData({ number: '', expiry: '', cvc: '' });
-        setCardError('');
-      } else {
-        setCardError('Failed to add card');
-      }
-    } catch (err) {
-      setCardError('Error adding card. Please try again.');
-      console.error('Error adding card:', err);
+      }).then(res => res.json());
+      setCards(updatedCards);
+      setShowAddCard(false);
+      setCardFormData({ number: '', expiry: '', cvc: '' });
+      setCardError('');
+    } else {
+      setCardError('Failed to add card');
     }
-  };
-
+  } catch (err) {
+    setCardError('Error adding card. Please try again.');
+    console.error('Error adding card:', err);
+  }
+};
   const setDefaultCard = async (cardId: string) => {
     try {
       await fetch(`http://127.0.0.1:8000/api/credit-cards/${cardId}/default`, {
@@ -505,40 +434,19 @@ const ProfileSection: React.FC = () => {
     window.location.reload();
   };
 
-  const toggleNotifications = () => {
-    if (activeSection === 'notifications') {
-      setActiveSection(null);
-      setSelectedNotification(null);
-    } else {
-      setActiveSection('notifications');
-    }
-  };
-
-  const handleNotificationClick = (notification: Notification) => {
-    setSelectedNotification(notification);
-    // Mark as read in a real app
-    setNotifications(prev => prev.map(n => 
-      n.id === notification.id ? { ...n, isRead: true } : n
-    ));
-  };
-
-  const closeNotificationDetail = () => {
-    setSelectedNotification(null);
-  };
-
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto flex justify-center items-center h-64">
+      <div className="w-full flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="w-full max-w-md sm:max-w-3xl mx-auto px-2 sm:px-6 py-4">
       {/* Profile Header */}
-      <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-        <div className="flex items-center space-x-4">
+      <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-4 sm:mb-6 w-full">
+        <div className="flex flex-col sm:flex-row items-center sm:space-x-4 space-y-4 sm:space-y-0">
           <div className="h-20 w-20 rounded-full bg-purple-100 flex items-center justify-center">
             {profile.avatar_url ? (
               <img 
@@ -552,11 +460,11 @@ const ProfileSection: React.FC = () => {
               </span>
             )}
           </div>
-          <div>
-            <h2 className="text-xl font-bold">{profile.full_name}</h2>
-            <p className="text-gray-600">{profile.email}</p>
+          <div className="text-center sm:text-left">
+            <h2 className="text-lg sm:text-xl font-bold">{profile.full_name}</h2>
+            <p className="text-gray-600 text-sm sm:text-base">{profile.email}</p>
             {profile.location && (
-              <div className="flex items-center mt-2 text-sm text-gray-500">
+              <div className="flex items-center mt-2 text-xs sm:text-sm text-gray-500 justify-center sm:justify-start">
                 <MapPin className="h-4 w-4 mr-1" />
                 <span>{profile.location}</span>
               </div>
@@ -566,15 +474,15 @@ const ProfileSection: React.FC = () => {
       </div>
 
       {/* Travel Persona Section */}
-      <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-4 sm:mb-6 w-full">
+        <div className="flex flex-col sm:flex-row items-center justify-between mb-4 sm:mb-6 gap-2">
           <div className="flex items-center gap-2">
             <Compass className="h-6 w-6 text-purple-600" />
-            <h3 className="text-lg font-semibold">Travel Persona</h3>
+            <h3 className="text-base sm:text-lg font-semibold">Travel Persona</h3>
           </div>
           <button
             onClick={() => setShowPersonaQuiz(true)}
-            className="text-sm text-purple-600 hover:text-purple-700 flex items-center gap-1"
+            className="text-xs sm:text-sm text-purple-600 hover:text-purple-700 flex items-center gap-1"
           >
             <Edit className="h-4 w-4" />
             {profile.preferences?.travelPersona ? 'Update' : 'Take Quiz'}
@@ -589,27 +497,24 @@ const ProfileSection: React.FC = () => {
         ) : profile.preferences?.travelPersona && Object.keys(profile.preferences.travelPersona).length > 0 ? (
           <div className="space-y-4">
             <h4 className="font-medium">Your Travel Style:</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
               {Object.entries(profile.preferences.travelPersona).map(([key, value]) => {
                 if (key === 'budgetAmount') return null;
-                
                 const question = questions.find(q => q.id === key);
                 if (!question) return null;
-                
                 const selectedOption = question.options.find(opt => 
                   Array.isArray(value) 
                     ? value.includes(opt.value) 
                     : opt.value === value
                 );
-
                 return (
-                  <div key={key} className="bg-gray-50 p-4 rounded-lg">
-                    <p className="text-sm text-gray-500">{question.text}</p>
+                  <div key={key} className="bg-gray-50 p-3 sm:p-4 rounded-lg">
+                    <p className="text-xs sm:text-sm text-gray-500">{question.text}</p>
                     <p className="font-medium mt-1">
                       {selectedOption?.emoji} {selectedOption?.label}
                     </p>
                     {key === 'budgetPreference' && profile.preferences?.travelPersona?.budgetAmount && (
-                      <p className="text-sm mt-1">
+                      <p className="text-xs sm:text-sm mt-1">
                         Budget: €{profile.preferences.travelPersona.budgetAmount}
                       </p>
                     )}
@@ -619,14 +524,14 @@ const ProfileSection: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="text-center py-8">
-            <Compass className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 mb-4">
+          <div className="text-center py-6 sm:py-8">
+            <Compass className="h-10 sm:h-12 w-10 sm:w-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600 text-sm sm:text-base mb-4">
               Discover your travel persona and get personalized recommendations
             </p>
             <button
               onClick={() => setShowPersonaQuiz(true)}
-              className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700"
+              className="bg-purple-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-purple-700 text-xs sm:text-base"
             >
               Take the Quiz
             </button>
@@ -635,26 +540,25 @@ const ProfileSection: React.FC = () => {
       </div>
 
       {/* Payment Methods */}
-      <div className="bg-white rounded-xl p-6 shadow-sm mb-6">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold">Payment Methods</h3>
+      <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm mb-4 sm:mb-6 w-full">
+        <div className="flex flex-col sm:flex-row items-center justify-between mb-4 sm:mb-6 gap-2">
+          <h3 className="text-base sm:text-lg font-semibold">Payment Methods</h3>
           <button
             onClick={() => setShowAddCard(true)}
-            className="flex items-center text-purple-600 hover:text-purple-700"
+            className="flex items-center text-purple-600 hover:text-purple-700 text-xs sm:text-sm"
           >
             <Plus className="h-5 w-5 mr-1" />
             Add New Card
           </button>
         </div>
-        
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {cards.map(card => (
-            <div key={card.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center space-x-4">
+            <div key={card.id} className="flex flex-col sm:flex-row items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg gap-2 sm:gap-0">
+              <div className="flex items-center space-x-2 sm:space-x-4">
                 <CreditCard className={`h-6 w-6 ${card.type === 'visa' ? 'text-blue-600' : 'text-red-600'}`} />
                 <div>
-                  <p className="font-medium">•••• {card.last4}</p>
-                  <p className="text-sm text-gray-500">Expires {card.expiry}</p>
+                  <p className="font-medium text-xs sm:text-base">•••• {card.last4}</p>
+                  <p className="text-xs sm:text-sm text-gray-500">Expires {card.expiry}</p>
                 </div>
                 {card.isDefault && (
                   <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">
@@ -666,23 +570,22 @@ const ProfileSection: React.FC = () => {
                 {!card.isDefault && (
                   <button
                     onClick={() => setDefaultCard(card.id)}
-                    className="text-sm text-purple-600 hover:text-purple-700"
+                    className="text-xs sm:text-sm text-purple-600 hover:text-purple-700"
                   >
                     Set as Default
                   </button>
                 )}
                 <button
                   onClick={() => removeCard(card.id)}
-                  className="text-sm text-red-600 hover:text-red-700"
+                  className="text-xs sm:text-sm text-red-600 hover:text-red-700"
                 >
                   Remove
                 </button>
               </div>
             </div>
           ))}
-          
           {cards.length === 0 && (
-            <div className="text-center py-6 text-gray-500">
+            <div className="text-center py-4 sm:py-6 text-gray-500 text-xs sm:text-base">
               No payment methods added yet
             </div>
           )}
@@ -690,121 +593,34 @@ const ProfileSection: React.FC = () => {
       </div>
 
       {/* Settings Cards */}
-      <div className="space-y-4">
-        <div className="bg-white rounded-xl p-4 shadow-sm space-y-4">
-          <div 
-            className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
-            onClick={() => setActiveSection('account')}
-          >
-            <div className="flex items-center space-x-3">
-              <Settings className="text-gray-600" />
-              <span>Account Settings</span>
-            </div>
-            <ChevronRight className="text-gray-400" />
-          </div>
-          <div 
-            className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
-            onClick={toggleNotifications}
-          >
-            <div className="flex items-center space-x-3">
-              <div className="relative">
-                <Bell className="text-gray-600" />
-                {notifications.some(n => !n.isRead) && (
-                  <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500"></span>
-                )}
+      <div className="space-y-3 sm:space-y-4 w-full">
+        <div className="bg-white rounded-xl p-3 sm:p-4 shadow-sm space-y-2 sm:space-y-4">
+          {['account', 'notifications', 'privacy', 'help', 'logout'].map((section, idx) => (
+            <div 
+              key={section}
+              className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-2 sm:px-4 rounded-lg"
+              onClick={() => section === 'logout' ? handleLogout() : setActiveSection(section)}
+            >
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                {section === 'account' && <Settings className="text-gray-600" />}
+                {section === 'notifications' && <Bell className="text-gray-600" />}
+                {section === 'privacy' && <Shield className="text-gray-600" />}
+                {section === 'help' && <HelpCircle className="text-gray-600" />}
+                {section === 'logout' && <X className="text-gray-600" />}
+                <span className="text-xs sm:text-base capitalize">{section === 'logout' ? 'Logout' : section.replace(/([A-Z])/g, ' $1')}</span>
               </div>
-              <span>Notifications</span>
+              <ChevronRight className="text-gray-400" />
             </div>
-            <ChevronRight className={`text-gray-400 transition-transform ${
-              activeSection === 'notifications' ? 'rotate-90' : ''
-            }`} />
-          </div>
-          
-          {/* Notifications Section */}
-          {activeSection === 'notifications' && (
-            <div className="mt-2 ml-10 bg-gray-50 rounded-lg p-4">
-              {selectedNotification ? (
-                <NotificationItem 
-                  notification={selectedNotification} 
-                  onClose={closeNotificationDetail}
-                />
-              ) : (
-                <>
-                  <h4 className="font-medium mb-3">Your Notifications</h4>
-                  {notifications.length === 0 ? (
-                    <p className="text-gray-500 text-sm">No notifications yet</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {notifications.map(notification => (
-                        <div 
-                          key={notification.id}
-                          onClick={() => handleNotificationClick(notification)}
-                          className={`p-3 rounded-lg cursor-pointer ${
-                            notification.isRead ? 'bg-white' : 'bg-purple-50'
-                          } border ${
-                            notification.isRead ? 'border-gray-200' : 'border-purple-200'
-                          }`}
-                        >
-                          <div className="flex justify-between items-start">
-                            <h5 className="font-medium">{notification.title}</h5>
-                            {!notification.isRead && (
-                              <span className="h-2 w-2 rounded-full bg-purple-600 mt-1.5"></span>
-                            )}
-                          </div>
-                          <p className="text-sm text-gray-600 mt-1 truncate">
-                            {notification.message}
-                          </p>
-                          <p className="text-xs text-gray-400 mt-1">
-                            {new Date(notification.createdAt).toLocaleDateString()}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-
-          <div 
-            className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
-            onClick={() => setActiveSection('privacy')}
-          >
-            <div className="flex items-center space-x-3">
-              <Shield className="text-gray-600" />
-              <span>Privacy & Security</span>
-            </div>
-            <ChevronRight className="text-gray-400" />
-          </div>
-          <div 
-            className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
-            onClick={() => setActiveSection('help')}
-          >
-            <div className="flex items-center space-x-3">
-              <HelpCircle className="text-gray-600" />
-              <span>Help & Support</span>
-            </div>
-            <ChevronRight className="text-gray-400" />
-          </div>
-          <div 
-            className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 px-4 rounded-lg"
-            onClick={handleLogout}
-          >
-            <div className="flex items-center space-x-3">
-              <X className="text-gray-600" />
-              <span>Logout</span>
-            </div>
-            <ChevronRight className="text-gray-400" />
-          </div>
+          ))}
         </div>
       </div>
 
       {/* Add Card Modal */}
       {showAddCard && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+          <div className="bg-white rounded-xl p-4 sm:p-6 w-full max-w-xs sm:max-w-md">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">Add New Card</h3>
+              <h3 className="text-base sm:text-xl font-bold">Add New Card</h3>
               <button 
                 onClick={() => {
                   setShowAddCard(false);
@@ -817,13 +633,13 @@ const ProfileSection: React.FC = () => {
               </button>
             </div>
             {cardError && (
-              <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">
+              <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-xs sm:text-sm">
                 {cardError}
               </div>
             )}
-            <form onSubmit={handleAddCard} className="space-y-4">
+            <form onSubmit={handleAddCard} className="space-y-3 sm:space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                   Card Number
                 </label>
                 <input
@@ -835,13 +651,13 @@ const ProfileSection: React.FC = () => {
                   })}
                   maxLength={16}
                   placeholder="1234 5678 9012 3456"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-2 sm:px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 text-xs sm:text-base"
                   required
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-2 sm:gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                     Expiry Date
                   </label>
                   <input
@@ -860,12 +676,12 @@ const ProfileSection: React.FC = () => {
                     }}
                     placeholder="MM/YY"
                     maxLength={5}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                    className="w-full px-2 sm:px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 text-xs sm:text-base"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                     CVC
                   </label>
                   <input
@@ -877,14 +693,14 @@ const ProfileSection: React.FC = () => {
                     })}
                     placeholder="123"
                     maxLength={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                    className="w-full px-2 sm:px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 text-xs sm:text-base"
                     required
                   />
                 </div>
               </div>
               <button
                 type="submit"
-                className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700"
+                className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 text-xs sm:text-base"
               >
                 Add Card
               </button>

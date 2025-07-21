@@ -116,10 +116,10 @@ const TravelPersonaQuiz: React.FC<TravelPersonaQuizProps> = ({ onComplete, initi
   const isMultiple = question.multiple;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6 space-y-6">
-      <div className="space-y-4">
-        <h3 className="text-xl font-semibold text-gray-900">{question.text}</h3>
-        <div className="grid grid-cols-1 gap-4">
+    <div className="bg-white rounded-xl shadow-sm p-3 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="space-y-2 sm:space-y-4">
+        <h3 className="text-lg sm:text-xl font-semibold text-gray-900">{question.text}</h3>
+        <div className="grid grid-cols-1 gap-2 sm:gap-4">
           {question.options.map((option) => {
             const isSelected = isMultiple 
               ? (answers[question.id] as string[] || []).includes(option.value)
@@ -129,21 +129,21 @@ const TravelPersonaQuiz: React.FC<TravelPersonaQuizProps> = ({ onComplete, initi
               <button
                 key={option.value}
                 onClick={() => handleAnswer(question.id, option.value)}
-                className={`flex items-center p-4 rounded-lg border-2 transition-colors ${
+                className={`flex items-center p-3 sm:p-4 rounded-lg border-2 transition-colors text-xs sm:text-base ${
                   isSelected
                     ? 'border-purple-600 bg-purple-50'
                     : 'border-gray-200 hover:border-purple-200'
                 }`}
               >
-                <div className="flex-1 flex items-center gap-3">
+                <div className="flex-1 flex items-center gap-2 sm:gap-3">
                   {option.icon && (
                     <option.icon className={`h-5 w-5 ${
                       isSelected ? 'text-purple-600' : 'text-gray-400'
                     }`} />
                   )}
                   <div className="text-left">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">{option.emoji}</span>
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      <span className="text-lg sm:text-xl">{option.emoji}</span>
                       <p className={`font-medium ${
                         isSelected ? 'text-purple-600' : 'text-gray-900'
                       }`}>
@@ -151,7 +151,7 @@ const TravelPersonaQuiz: React.FC<TravelPersonaQuizProps> = ({ onComplete, initi
                       </p>
                     </div>
                     {option.description && (
-                      <p className="text-sm text-gray-500 mt-1">{option.description}</p>
+                      <p className="text-xs sm:text-sm text-gray-500 mt-1">{option.description}</p>
                     )}
                   </div>
                 </div>
@@ -164,8 +164,8 @@ const TravelPersonaQuiz: React.FC<TravelPersonaQuizProps> = ({ onComplete, initi
 
           {/* Budget Slider */}
           {question.hasBudgetSlider && answers[question.id] === 'yes' && (
-            <div className="mt-4 p-4 bg-purple-50 rounded-lg">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-purple-50 rounded-lg">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                 Select your budget range (€{budgetValue})
               </label>
               <input
@@ -177,7 +177,7 @@ const TravelPersonaQuiz: React.FC<TravelPersonaQuizProps> = ({ onComplete, initi
                 onChange={handleBudgetChange}
                 className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
               />
-              <div className="flex justify-between text-sm text-gray-500 mt-2">
+              <div className="flex justify-between text-xs sm:text-sm text-gray-500 mt-1 sm:mt-2">
                 <span>€100</span>
                 <span>€1000</span>
               </div>
@@ -186,10 +186,10 @@ const TravelPersonaQuiz: React.FC<TravelPersonaQuizProps> = ({ onComplete, initi
         </div>
       </div>
 
-      <div className="flex justify-between items-center pt-4">
+      <div className="flex justify-between items-center pt-3 sm:pt-4">
         <button
           onClick={() => setCurrentQuestion(Math.max(0, currentQuestion - 1))}
-          className={`text-sm text-purple-600 ${
+          className={`text-xs sm:text-sm text-purple-600 ${
             currentQuestion === 0 ? 'invisible' : ''
           }`}
         >

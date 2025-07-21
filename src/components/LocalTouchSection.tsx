@@ -266,15 +266,15 @@ const LocalTouchSection: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-5xl mx-auto px-2 sm:px-6 py-4">
       {/* Filters */}
-      <div className="flex flex-wrap gap-4">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-4 mb-4 sm:mb-8">
         {/* City Filter */}
-        <div className="relative">
+        <div className="relative w-full sm:w-auto">
           <select
             value={selectedCity || ''}
             onChange={(e) => setSelectedCity(e.target.value || null)}
-            className="appearance-none bg-white dark:bg-gray-800 dark:text-white pl-4 pr-10 py-2 rounded-lg border border-gray-200 dark:border-gray-700 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+            className="appearance-none bg-white dark:bg-gray-800 dark:text-white pl-4 pr-10 py-2 rounded-lg border border-gray-200 dark:border-gray-700 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 w-full sm:w-auto text-sm sm:text-base"
           >
             <option value="">All Cities</option>
             {cities.map(city => (
@@ -287,33 +287,33 @@ const LocalTouchSection: React.FC = () => {
         {/* Category Filters */}
         <button
           onClick={() => setSelectedType(selectedType === 'food' ? null : 'food')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-base ${
             selectedType === 'food'
               ? 'bg-purple-600 text-white'
               : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-          }`}
+          } w-full sm:w-auto`}
         >
           <Utensils className="h-4 w-4" />
           Food
         </button>
         <button
           onClick={() => setSelectedType(selectedType === 'music' ? null : 'music')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-base ${
             selectedType === 'music'
               ? 'bg-purple-600 text-white'
               : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-          }`}
+          } w-full sm:w-auto`}
         >
           <Music className="h-4 w-4" />
           Music
         </button>
         <button
           onClick={() => setSelectedType(selectedType === 'craft' ? null : 'craft')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-base ${
             selectedType === 'craft'
               ? 'bg-purple-600 text-white'
               : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-          }`}
+          } w-full sm:w-auto`}
         >
           <Palette className="h-4 w-4" />
           Craft
@@ -324,40 +324,40 @@ const LocalTouchSection: React.FC = () => {
       <div className="space-y-8">
         {(selectedCity ? [selectedCity] : cities).map(city => (
           <div key={city} className="space-y-4">
-            <h2 className="text-2xl font-bold flex items-center gap-2 dark:text-white">
+            <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2 dark:text-white">
               <MapPin className="h-6 w-6 text-purple-600" />
               {city}
             </h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {filteredExperiences
                 .filter(exp => exp.city === city)
                 .map(experience => (
                   <div key={experience.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                    <div className="relative h-48">
+                    <div className="relative h-40 sm:h-48">
                       <img
                         src={getImageUrl(experience.image)}
                         alt={experience.name}
                         className="w-full h-full object-cover"
                       />
-                      <button className="absolute top-4 right-4 p-2 bg-white/90 dark:bg-gray-800/90 rounded-full hover:bg-white dark:hover:bg-gray-700 transition-colors">
+                      <button className="absolute top-2 right-2 p-2 bg-white/90 dark:bg-gray-800/90 rounded-full hover:bg-white dark:hover:bg-gray-700 transition-colors">
                         <Heart className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                       </button>
                     </div>
-                    <div className="p-4">
-                      <div className="flex items-center gap-2 text-sm text-purple-600 mb-2">
+                    <div className="p-2 sm:p-4">
+                      <div className="flex items-center gap-2 text-xs sm:text-sm text-purple-600 mb-1 sm:mb-2">
                         {experience.type === 'food' && <Utensils className="h-4 w-4" />}
                         {experience.type === 'music' && <Music className="h-4 w-4" />}
                         {experience.type === 'craft' && <Palette className="h-4 w-4" />}
                         <span className="capitalize">{experience.type}</span>
                       </div>
-                      <h3 className="font-semibold text-lg mb-2 dark:text-white">{experience.name}</h3>
-                      <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">{experience.description}</p>
+                      <h3 className="font-semibold text-base sm:text-lg mb-1 sm:mb-2 dark:text-white">{experience.name}</h3>
+                      <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm mb-2 sm:mb-4">{experience.description}</p>
                       
                       {renderHighlights(experience)}
                       
-                      <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-4 mt-4">
-                        <div className="flex items-center gap-4">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-2 sm:mb-4 mt-2 sm:mt-4 gap-2 sm:gap-0">
+                        <div className="flex items-center gap-2 sm:gap-4">
                           <span className="flex items-center gap-1">
                             <Clock className="h-4 w-4" />
                             {experience.duration}
@@ -375,10 +375,10 @@ const LocalTouchSection: React.FC = () => {
                       
                       {renderWhyChoose(experience)}
                       
-                      <div className="flex items-center justify-between mt-4">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between mt-2 sm:mt-4 gap-2 sm:gap-0">
                         <div>
-                          <p className="text-lg font-semibold dark:text-white">€{experience.price.toFixed(2)}</p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">per person</p>
+                          <p className="text-base sm:text-lg font-semibold dark:text-white">€{experience.price.toFixed(2)}</p>
+                          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">per person</p>
                         </div>
                         {experience.user_has_booking ? (
                           <button
@@ -386,7 +386,7 @@ const LocalTouchSection: React.FC = () => {
                               setBookingDetailsToShow(experience);
                               setShowDetailsModal(true);
                             }}
-                            className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+                            className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors text-xs sm:text-base"
                           >
                             View Details
                           </button>
@@ -396,7 +396,7 @@ const LocalTouchSection: React.FC = () => {
                               setSelectedExperience(experience);
                               setShowBookingModal(true);
                             }}
-                            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors text-xs sm:text-base"
                           >
                             Book Now
                           </button>

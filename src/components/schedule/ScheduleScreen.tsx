@@ -30,7 +30,8 @@ interface ScheduleSettings {
 }
 
 const ScheduleScreen: React.FC = () => {
-  const { settings, updateSettings } = useSettings();
+  // Only destructure what is used from useSettings
+  useSettings();
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [scheduleSettings, setScheduleSettings] = useState<ScheduleSettings>({
     notifications: {
@@ -54,11 +55,11 @@ const ScheduleScreen: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-4">
-      <div className="mb-6 flex justify-between items-center">
+    <div className="max-w-7xl mx-auto p-2 sm:p-4">
+      <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
         <div>
-          <h2 className="text-2xl font-bold">My Schedule</h2>
-          <p className="text-gray-600">Plan your activities for each day of the week</p>
+          <h2 className="text-lg sm:text-2xl font-bold">My Schedule</h2>
+          <p className="text-xs sm:text-base text-gray-600">Plan your activities for each day of the week</p>
         </div>
         <button
           onClick={() => setShowSettingsModal(true)}
@@ -69,34 +70,34 @@ const ScheduleScreen: React.FC = () => {
       </div>
 
       {/* Existing schedule grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-6">
         {/* ... (keep existing schedule grid code) */}
       </div>
 
       {/* Settings Modal */}
       {showSettingsModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold">Schedule Settings</h3>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-2 sm:px-0">
+          <div className="bg-white rounded-xl p-3 sm:p-6 w-full max-w-xs sm:max-w-md">
+            <div className="flex justify-between items-center mb-3 sm:mb-6">
+              <h3 className="text-lg sm:text-xl font-bold">Schedule Settings</h3>
               <button
                 onClick={() => setShowSettingsModal(false)}
                 className="text-gray-500 hover:text-gray-700"
               >
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-3 sm:space-y-6">
               {/* Notification Settings */}
               <div>
-                <h4 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
+                <h4 className="font-medium text-gray-900 mb-2 sm:mb-4 flex items-center gap-2">
                   <Bell className="h-5 w-5 text-purple-600" />
                   Notifications
                 </h4>
-                <div className="space-y-4">
+                <div className="space-y-2 sm:space-y-4">
                   <label className="flex items-center justify-between">
-                    <span className="text-gray-700">Activity Reminders</span>
+                    <span className="text-xs sm:text-base text-gray-700">Activity Reminders</span>
                     <input
                       type="checkbox"
                       checked={scheduleSettings.notifications.reminders}
@@ -111,7 +112,7 @@ const ScheduleScreen: React.FC = () => {
                     />
                   </label>
                   <label className="flex items-center justify-between">
-                    <span className="text-gray-700">Daily Schedule Digest</span>
+                    <span className="text-xs sm:text-base text-gray-700">Daily Schedule Digest</span>
                     <input
                       type="checkbox"
                       checked={scheduleSettings.notifications.dailyDigest}
@@ -126,7 +127,7 @@ const ScheduleScreen: React.FC = () => {
                     />
                   </label>
                   <label className="flex items-center justify-between">
-                    <span className="text-gray-700">Upcoming Activities</span>
+                    <span className="text-xs sm:text-base text-gray-700">Upcoming Activities</span>
                     <input
                       type="checkbox"
                       checked={scheduleSettings.notifications.upcomingActivities}
@@ -145,13 +146,13 @@ const ScheduleScreen: React.FC = () => {
 
               {/* Display Settings */}
               <div>
-                <h4 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
+                <h4 className="font-medium text-gray-900 mb-2 sm:mb-4 flex items-center gap-2">
                   <Globe className="h-5 w-5 text-purple-600" />
                   Display
                 </h4>
-                <div className="space-y-4">
+                <div className="space-y-2 sm:space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                       Time Format
                     </label>
                     <select
@@ -163,7 +164,7 @@ const ScheduleScreen: React.FC = () => {
                           timeFormat: e.target.value as '12h' | '24h'
                         }
                       })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                      className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 text-xs sm:text-base"
                     >
                       <option value="12h">12-hour (AM/PM)</option>
                       <option value="24h">24-hour</option>
@@ -171,7 +172,7 @@ const ScheduleScreen: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                       Start of Week
                     </label>
                     <select
@@ -183,7 +184,7 @@ const ScheduleScreen: React.FC = () => {
                           startOfWeek: e.target.value as 'Monday' | 'Sunday'
                         }
                       })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                      className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 text-xs sm:text-base"
                     >
                       <option value="Monday">Monday</option>
                       <option value="Sunday">Sunday</option>
@@ -191,7 +192,7 @@ const ScheduleScreen: React.FC = () => {
                   </div>
 
                   <label className="flex items-center justify-between">
-                    <span className="text-gray-700">Show Weekends</span>
+                    <span className="text-xs sm:text-base text-gray-700">Show Weekends</span>
                     <input
                       type="checkbox"
                       checked={scheduleSettings.display.showWeekends}
@@ -208,10 +209,10 @@ const ScheduleScreen: React.FC = () => {
                 </div>
               </div>
 
-              <div className="pt-4 border-t">
+              <div className="pt-3 sm:pt-4 border-t">
                 <button
                   onClick={() => setShowSettingsModal(false)}
-                  className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700"
+                  className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 text-xs sm:text-base"
                 >
                   Save Settings
                 </button>

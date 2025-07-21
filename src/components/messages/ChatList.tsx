@@ -72,16 +72,20 @@ const ChatList: React.FC<ChatListProps> = ({ selectedChat, onSelectChat, searchQ
     <div className="flex-1 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
       <div className="divide-y divide-gray-100">
         {loading ? (
-          <p className="p-4 text-sm text-gray-500">Loading chats...</p>
+          <p className="p-2 sm:p-4 text-xs sm:text-sm text-gray-500">Loading chats...</p>
         ) : filteredChats.length === 0 ? (
-          <p className="p-4 text-sm text-gray-500">No connections found</p>
+          <p className="p-2 sm:p-4 text-xs sm:text-sm text-gray-500">No connections found</p>
         ) : (
           filteredChats.map((chat) => (
             <button
               key={chat.user_id}
-              onClick={() => onSelectChat(chat.user_id, chat)}
-              className={`w-full p-4 flex items-start space-x-3 hover:bg-gray-50 transition-colors ${
-                selectedChat === chat.user_id ? 'bg-purple-50' : ''
+              onClick={() => {
+                if (typeof chat.user_id === 'string') {
+                  onSelectChat(chat.user_id, chat);
+                }
+              }}
+              className={`w-full p-2 sm:p-4 flex items-start space-x-2 sm:space-x-3 hover:bg-gray-50 transition-colors ${
+                (selectedChat ?? '') === chat.user_id ? 'bg-purple-50' : ''
               }`}
             >
               <div className="relative flex-shrink-0">
@@ -89,17 +93,17 @@ const ChatList: React.FC<ChatListProps> = ({ selectedChat, onSelectChat, searchQ
                   <img
                     src={chat.avatar}
                     alt={chat.name}
-                    className="w-12 h-12 rounded-full object-cover"
+                    className="w-8 h-8 sm:w-12 sm:h-12 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
-                    <User className="h-6 w-6 text-purple-600" />
+                  <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-purple-100 flex items-center justify-center">
+                    <User className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
                   </div>
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-gray-900 truncate">{chat.name}</h4>
-                <p className="text-sm text-gray-600 truncate">Traveler</p>
+                <h4 className="font-medium text-gray-900 truncate text-xs sm:text-base">{chat.name}</h4>
+                <p className="text-xs sm:text-sm text-gray-600 truncate">Traveler</p>
               </div>
             </button>
           ))

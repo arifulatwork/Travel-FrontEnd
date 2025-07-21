@@ -2,13 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Plane } from 'lucide-react';
 import TripCard from './TripCard';
 import TripDetails from './TripDetails';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements } from '@stripe/react-stripe-js';
-import BalkanTripPaymentModal from './balkan/BalkanTripPaymentModal';
-import BalkanTripBookingDetailsModal from './balkan/BalkanTripBookingDetailsModal';
 
 const BASE_URL = 'http://127.0.0.1:8000';
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_...');
 
 interface BalkanTrip {
   id: number;
@@ -44,27 +39,6 @@ const BalkanTripsSection: React.FC = () => {
   const [trips, setTrips] = useState<BalkanTrip[]>([]);
   const [selectedTrip, setSelectedTrip] = useState<BalkanTrip | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [bookingId, setBookingId] = useState<number | null>(null);
-  const [bookedTripIds, setBookedTripIds] = useState<number[]>([]);
-  const [viewBookingId, setViewBookingId] = useState<number | null>(null);
-
-  const fetchBookings = async () => {
-    try {
-      const res = await fetch(`${BASE_URL}/api/auth/balkan-trip/my-bookings`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setBookedTripIds(data);
-      }
-    } catch (error) {
-      console.warn('Could not fetch booked trip IDs (unauthenticated?)');
-    }
-  };
 
   useEffect(() => {
     fetch(`${BASE_URL}/api/balkan-trips`)
@@ -77,36 +51,12 @@ const BalkanTripsSection: React.FC = () => {
         console.error('Failed to fetch balkan trips', err);
         setLoading(false);
       });
-
-    // Fetch user bookings
-    fetchBookings();
   }, []);
 
-  const handleBook = async () => {
-    if (!selectedTrip) return;
-
-    try {
-      const res = await fetch(`${BASE_URL}/api/auth/balkan-trip/book`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ balkan_trip_id: selectedTrip.id })
-      });
-
-      const data = await res.json();
-
-      if (data.client_secret) {
-        setClientSecret(data.client_secret);
-        setBookingId(data.booking_id);
-        setShowPaymentModal(true);
-      } else {
-        alert('Failed to create booking. Please try again.');
-      }
-    } catch (err) {
-      console.error('Booking error:', err);
-      alert('Something went wrong.');
+  const handleBook = () => {
+    if (selectedTrip) {
+      console.log('Booking:', selectedTrip.slug);
+      // Implement your booking or Stripe payment modal here
     }
   };
 
@@ -115,8 +65,6 @@ const BalkanTripsSection: React.FC = () => {
   }
 
   if (selectedTrip) {
-    const isBooked = bookedTripIds.includes(selectedTrip.id);
-    
     return (
       <div className="p-4">
         <button
@@ -144,32 +92,7 @@ const BalkanTripsSection: React.FC = () => {
           }))}
           included={selectedTrip.included}
           onBook={handleBook}
-          isBooked={isBooked}
-          onViewDetails={() => setViewBookingId(selectedTrip.id)}
         />
-
-        {showPaymentModal && clientSecret && bookingId && (
-          <Elements stripe={stripePromise} options={{ clientSecret }}>
-            <BalkanTripPaymentModal
-              clientSecret={clientSecret}
-              bookingId={bookingId}
-              onClose={() => {
-                setShowPaymentModal(false);
-                setClientSecret(null);
-                setBookingId(null);
-                // Refresh bookings after payment
-                fetchBookings();
-              }}
-            />
-          </Elements>
-        )}
-
-        {viewBookingId && (
-          <BalkanTripBookingDetailsModal
-            bookingId={viewBookingId}
-            onClose={() => setViewBookingId(null)}
-          />
-        )}
       </div>
     );
   }
@@ -187,28 +110,23 @@ const BalkanTripsSection: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {trips.map((trip) => {
-          const isBooked = bookedTripIds.includes(trip.id);
-
-          return (
-            <TripCard
-              key={trip.slug}
-              title={trip.title}
-              description={trip.description}
-              durationDays={parseInt(trip.duration)}
-              price={trip.price}
-              image={getFullImageUrl(trip.image_url)}
-              maxParticipants={trip.group_size.max}
-              highlights={trip.itinerary.slice(0, 2).map((i) => ({
-                time: '',
-                activity: i.title,
-                description: i.description
-              }))}
-              onClick={() => setSelectedTrip(trip)}
-              isBooked={isBooked}
-            />
-          );
-        })}
+        {trips.map((trip) => (
+          <TripCard
+            key={trip.slug}
+            title={trip.title}
+            description={trip.description}
+            durationDays={parseInt(trip.duration)}
+            price={trip.price}
+            image={getFullImageUrl(trip.image_url)}
+            maxParticipants={trip.group_size.max}
+            highlights={trip.itinerary.slice(0, 2).map((i) => ({
+              time: '',
+              activity: i.title,
+              description: i.description
+            }))}
+            onClick={() => setSelectedTrip(trip)}
+          />
+        ))}
       </div>
     </div>
   );

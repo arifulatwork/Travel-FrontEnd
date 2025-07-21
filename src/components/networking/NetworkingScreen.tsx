@@ -229,9 +229,9 @@ const NetworkingScreen: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-4">
+    <div className="max-w-5xl mx-auto px-2 sm:px-4 md:px-6 py-4">
       {showMeetingSuccess && (
-        <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in">
+        <div className="fixed top-4 right-2 left-2 sm:right-4 sm:left-auto bg-green-500 text-white px-4 sm:px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in text-xs sm:text-sm text-center sm:text-left">
           <div className="flex items-center gap-2">
             <Check className="h-5 w-5" />
             <span>Meeting scheduled successfully!</span>
@@ -240,7 +240,7 @@ const NetworkingScreen: React.FC = () => {
       )}
 
       {showInviteSuccess && (
-        <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in">
+        <div className="fixed top-4 right-2 left-2 sm:right-4 sm:left-auto bg-green-500 text-white px-4 sm:px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in text-xs sm:text-sm text-center sm:text-left">
           <div className="flex items-center gap-2">
             <Check className="h-5 w-5" />
             <span>Invitations sent successfully!</span>
@@ -248,12 +248,12 @@ const NetworkingScreen: React.FC = () => {
         </div>
       )}
 
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold">Networking</h2>
+      <div className="mb-4 sm:mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
+          <h2 className="text-lg sm:text-2xl font-bold">Networking</h2>
           <button
             onClick={() => setShowInviteModal(true)}
-            className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
+            className="flex items-center gap-2 bg-purple-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-purple-700 text-xs sm:text-base"
           >
             <UserPlus className="h-4 w-4" />
             Invite to Chat
@@ -261,10 +261,10 @@ const NetworkingScreen: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex gap-4 border-b mb-6">
+      <div className="flex gap-2 sm:gap-4 border-b mb-4 sm:mb-6 overflow-x-auto">
         <button
           onClick={() => setActiveTab('buddies')}
-          className={`px-4 py-2 font-medium ${
+          className={`px-2 sm:px-4 py-2 font-medium text-xs sm:text-base ${
             activeTab === 'buddies'
               ? 'text-purple-600 border-b-2 border-purple-600'
               : 'text-gray-600 hover:text-gray-900'
@@ -274,7 +274,7 @@ const NetworkingScreen: React.FC = () => {
         </button>
         <button
           onClick={() => setActiveTab('meetings')}
-          className={`px-4 py-2 font-medium flex items-center gap-2 ${
+          className={`px-2 sm:px-4 py-2 font-medium flex items-center gap-2 text-xs sm:text-base ${
             activeTab === 'meetings'
               ? 'text-purple-600 border-b-2 border-purple-600'
               : 'text-gray-600 hover:text-gray-900'
@@ -286,10 +286,10 @@ const NetworkingScreen: React.FC = () => {
       </div>
 
       {activeTab === 'buddies' ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-6">
           {/* Left sidebar - Networking list */}
           <div className="md:col-span-1 bg-white rounded-xl shadow-sm overflow-hidden flex flex-col">
-            <div className="p-4 border-b">
+            <div className="p-2 sm:p-4 border-b">
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 text-gray-400" />
                 <input
@@ -297,28 +297,28 @@ const NetworkingScreen: React.FC = () => {
                   placeholder="Search buddies..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full pl-10 pr-4 py-2 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs sm:text-base"
                 />
               </div>
             </div>
             <div className="divide-y overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
               {filteredBuddies.map(buddy => (
-                <div key={buddy.id} className="p-4 hover:bg-gray-50">
-                  <div className="flex items-center space-x-4">
+                <div key={buddy.id} className="p-2 sm:p-4 hover:bg-gray-50">
+                  <div className="flex items-center space-x-2 sm:space-x-4">
                     {buddy.avatar ? (
                       <img
                         src={buddy.avatar}
                         alt={buddy.name}
-                        className="w-12 h-12 rounded-full object-cover"
+                        className="w-8 h-8 sm:w-12 sm:h-12 rounded-full object-cover"
                       />
                     ) : (
-                      <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                        <Users className="h-6 w-6 text-purple-600" />
+                      <div className="w-8 h-8 sm:w-12 sm:h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                        <Users className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-gray-900 truncate">{buddy.name}</h4>
-                      <div className="flex items-center text-sm text-gray-500">
+                      <h4 className="font-medium text-gray-900 truncate text-xs sm:text-base">{buddy.name}</h4>
+                      <div className="flex items-center text-xs sm:text-sm text-gray-500">
                         <MapPin className="h-4 w-4 mr-1" />
                         {buddy.location}
                       </div>
@@ -326,17 +326,17 @@ const NetworkingScreen: React.FC = () => {
                     {buddy.connectionStatus === 'none' && (
                       <button
                         onClick={() => handleConnect(buddy)}
-                        className="flex items-center gap-1 text-purple-600 hover:text-purple-700"
+                        className="flex items-center gap-1 text-purple-600 hover:text-purple-700 text-xs sm:text-base"
                       >
                         <UserPlus className="h-4 w-4" />
                         Connect
                       </button>
                     )}
                     {buddy.connectionStatus === 'pending' && (
-                      <span className="text-orange-600 text-sm">Pending</span>
+                      <span className="text-orange-600 text-xs sm:text-sm">Pending</span>
                     )}
                     {buddy.connectionStatus === 'connected' && (
-                      <button className="flex items-center gap-1 text-purple-600 hover:text-purple-700">
+                      <button className="flex items-center gap-1 text-purple-600 hover:text-purple-700 text-xs sm:text-base">
                         <MessageCircle className="h-4 w-4" />
                         Message
                       </button>
@@ -346,21 +346,21 @@ const NetworkingScreen: React.FC = () => {
               ))}
             </div>
           </div>
-          <div className="md:col-span-2 bg-white rounded-xl shadow-sm p-6">
-            <div className="text-center py-12">
-              <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Select a chat to start messaging</h3>
-              <p className="text-gray-600">Choose someone from the list to start a conversation</p>
+          <div className="md:col-span-2 bg-white rounded-xl shadow-sm p-2 sm:p-6">
+            <div className="text-center py-8 sm:py-12">
+              <MessageCircle className="h-8 sm:h-12 w-8 sm:w-12 text-gray-400 mx-auto mb-2 sm:mb-4" />
+              <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-1 sm:mb-2">Select a chat to start messaging</h3>
+              <p className="text-gray-600 text-xs sm:text-base">Choose someone from the list to start a conversation</p>
             </div>
           </div>
         </div>
       ) : (
-        <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h3 className="text-xl font-semibold">Upcoming Meetings</h3>
+        <div className="space-y-4 sm:space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-0">
+            <h3 className="text-lg sm:text-xl font-semibold">Upcoming Meetings</h3>
             <button
               onClick={handleCreateMeeting}
-              className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
+              className="flex items-center gap-2 bg-purple-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-purple-700 text-xs sm:text-base"
             >
               <Plus className="h-4 w-4" />
               Schedule Meeting
@@ -368,82 +368,59 @@ const NetworkingScreen: React.FC = () => {
           </div>
 
           {meetings.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-6">
               {meetings.map((meeting) => (
-                <div key={meeting.id} className="bg-white rounded-xl shadow-sm p-6">
-                  <div className="flex justify-between items-start mb-4">
+                <div key={meeting.id} className="bg-white rounded-xl shadow-sm p-2 sm:p-6">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 sm:mb-4 gap-2 sm:gap-0">
                     <div>
-                      <h3 className="text-lg font-semibold">{meeting.title}</h3>
-                      <p className="text-gray-600">{meeting.description}</p>
+                      <h3 className="text-base sm:text-lg font-semibold">{meeting.title}</h3>
+                      <p className="text-xs sm:text-sm text-gray-600">{meeting.description}</p>
                     </div>
                     {meeting.type === 'virtual' && meeting.meetingLink && (
                       <button
                         onClick={() => copyMeetingLink(meeting.meetingLink!)}
-                        className="flex items-center gap-2 text-purple-600 hover:text-purple-700"
+                        className="flex items-center gap-2 text-purple-600 hover:text-purple-700 text-xs sm:text-base"
                       >
                         <Link className="h-4 w-4" />
                         Copy Link
                       </button>
                     )}
                   </div>
-                  
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div className="flex items-center gap-2 text-gray-600">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-2 sm:mb-4">
+                    <div className="flex items-center gap-1 sm:gap-2 text-gray-600 text-xs sm:text-sm">
                       <Calendar className="h-4 w-4" />
                       <span>{meeting.date}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-600">
+                    <div className="flex items-center gap-1 sm:gap-2 text-gray-600 text-xs sm:text-sm">
                       <Clock className="h-4 w-4" />
                       <span>{meeting.time}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-600">
+                    <div className="flex items-center gap-1 sm:gap-2 text-gray-600 text-xs sm:text-sm">
                       <Clock className="h-4 w-4" />
-                      <span>{meeting.duration} hour(s)</span>
+                      <span>{meeting.duration}h</span>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-600">
-                      {meeting.type === 'virtual' ? (
-                        <Video className="h-4 w-4" />
-                      ) : (
-                        <MapPin className="h-4 w-4" />
-                      )}
-                      <span>{meeting.type === 'virtual' ? 'Virtual Meeting' : meeting.location}</span>
+                    <div className="flex items-center gap-1 sm:gap-2 text-gray-600 text-xs sm:text-sm">
+                      <MapPin className="h-4 w-4" />
+                      <span>{meeting.location || meeting.type}</span>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-2">
-                    <div className="flex -space-x-2">
-                      {participants.slice(0, 3).map((participant) => (
-                        <div
-                          key={participant.id}
-                          className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center border-2 border-white"
-                        >
-                          <span className="text-purple-600 text-xs font-medium">
-                            {participant.name[0].toUpperCase()}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                    {participants.length > 3 && (
-                      <span className="text-sm text-gray-500">
-                        +{participants.length - 3} more
+                  <div className="flex flex-wrap gap-1 sm:gap-2 mb-2 sm:mb-4">
+                    {meeting.attendees.map((attendee) => (
+                      <span key={attendee.id + '-' + meeting.id} className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs sm:text-sm">
+                        {attendee.name}
                       </span>
-                    )}
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs sm:text-sm text-gray-500">Organized by:</span>
+                    <span className="font-medium text-xs sm:text-sm">{meeting.organizer.name}</span>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-12 bg-white rounded-xl shadow-sm">
-              <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Meetings Scheduled</h3>
-              <p className="text-gray-600 mb-4">Schedule a meeting to connect with travel buddies</p>
-              <button
-                onClick={handleCreateMeeting}
-                className="inline-flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
-              >
-                <Plus className="h-4 w-4" />
-                Schedule Meeting
-              </button>
+            <div className="bg-white rounded-xl shadow-sm p-2 sm:p-6 text-center text-xs sm:text-base text-gray-600">
+              No meetings scheduled yet.
             </div>
           )}
         </div>
@@ -720,7 +697,7 @@ const NetworkingScreen: React.FC = () => {
                   <div className="flex flex-wrap gap-2 mt-2">
                     {participants.map((participant) => (
                       <div
-                        key={participant.id}
+                        key={participant.id + '-participant'}
                         className="flex items-center gap-2 bg-purple-50 px-3 py-1 rounded-full"
                       >
                         <span className="text-sm text-purple-700">{participant.email}</span>
