@@ -12,11 +12,8 @@ import MessagesScreen from './components/messages/MessagesScreen';
 import SettingsScreen from './components/settings/SettingsScreen';
 import NetworkingScreen from './components/networking/NetworkingScreen';
 import PremiumSection from './components/premium/PremiumSection';
-
 import LoginForm from './components/auth/LoginForm';
-import RegisterForm from './components/auth/RegisterForm';
-import ForgotPasswordForm from './components/auth/ForgotPasswordForm';
-
+import RegisterForm from './components/auth/RegisterForm'; // ✅ Make sure it's imported
 import { useSettings } from './contexts/SettingsContext';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_yourKeyHere');
@@ -53,15 +50,15 @@ const TRANSLATIONS: Record<string, Translations> = {
 
 function App() {
   const { settings } = useSettings();
-  const [activeTab, setActiveTab] = useState<'login' | 'signup' | 'forgot' | string>('login');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [activeTab, setActiveTab] = useState('explore');
+  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
-      setIsAuthenticated(true);
-      setActiveTab('explore');
+    setIsAuthenticated(!!token);
+    if (!token) {
+      setActiveTab('login');
     }
   }, []);
 
@@ -73,6 +70,8 @@ function App() {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('user');
     setIsAuthenticated(false);
     setActiveTab('login');
   };
@@ -82,13 +81,12 @@ function App() {
       handleLogout();
       return;
     }
-
-    if (!isAuthenticated && tab !== 'login' && tab !== 'signup' && tab !== 'forgot') {
+    // Route protection: only allow access to main tabs if authenticated
+    if (!isAuthenticated && tab !== 'login' && tab !== 'signup') {
       setShowLoginPrompt(true);
       setActiveTab('login');
       return;
     }
-
     setActiveTab(tab);
   };
 
@@ -101,31 +99,23 @@ function App() {
               {TRANSLATIONS.en.loginRequired}
             </div>
           )}
-          <LoginForm
-            onLoginSuccess={handleLoginSuccess}
-            onForgotPassword={() => setActiveTab('forgot')}
-            onSignUp={() => setActiveTab('signup')}
+          <LoginForm 
+            onLoginSuccess={handleLoginSuccess} 
+            onForgotPassword={() => {}} 
+            onSignUp={() => setActiveTab('signup')} 
           />
         </div>
       );
     }
-
     if (activeTab === 'signup') {
       return (
         <div className="p-4">
-          <RegisterForm onRegisterSuccess={() => setActiveTab('login')} />
+          <RegisterForm 
+            onRegisterSuccess={() => setActiveTab('login')} 
+          />
         </div>
       );
     }
-
-    if (activeTab === 'forgot') {
-      return (
-        <div className="p-4">
-          <ForgotPasswordForm onBackToLogin={() => setActiveTab('login')} />
-        </div>
-      );
-    }
-
     switch (activeTab) {
       case 'explore': return <ExploreSection />;
       case 'profile': return <ProfileSection />;
@@ -143,14 +133,21 @@ function App() {
     <Router>
       <Elements stripe={stripePromise}>
         <div className={`min-h-screen ${settings.appearance.darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
-          <Navigation
-            activeTab={activeTab}
-            setActiveTab={handleTabChange}
-            darkMode={settings.appearance.darkMode}
-            translations={TRANSLATIONS.en}
-          />
-
-          <main className={`flex-1 p-8 ml-64 ${settings.appearance.darkMode ? 'text-white' : 'text-gray-900'}`}>
+          {(activeTab !== 'login' && activeTab !== 'signup') && (
+            <Navigation 
+              activeTab={activeTab}
+              setActiveTab={handleTabChange}
+              darkMode={settings.appearance.darkMode}
+              translations={TRANSLATIONS.en}
+            />
+          )}
+          <main
+            className={
+              activeTab === 'login' || activeTab === 'signup'
+                ? 'flex-1 w-full min-h-screen flex justify-center items-center p-0'
+                : `flex-1 w-full p-4 sm:p-8 ${settings.appearance.darkMode ? 'text-white' : 'text-gray-900'}`
+            }
+          >
             {renderContent()}
           </main>
         </div>

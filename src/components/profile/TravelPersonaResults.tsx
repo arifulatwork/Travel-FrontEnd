@@ -69,29 +69,29 @@ const TravelPersonaResults: React.FC<TravelPersonaResultsProps> = ({ answers }) 
   const persona = determinePersona(answers);
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6">
-      <div className="flex items-center gap-4 mb-6">
-        <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-          <persona.icon className="h-6 w-6 text-purple-600" />
+    <div className="bg-white rounded-xl shadow-sm p-3 sm:p-6">
+      <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 rounded-full flex items-center justify-center">
+          <persona.icon className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
         </div>
         <div>
-          <h3 className="text-xl font-bold text-gray-900">Your Travel Persona:</h3>
-          <p className="text-purple-600 font-semibold">{persona.type}</p>
+          <h3 className="text-lg sm:text-xl font-bold text-gray-900">Your Travel Persona:</h3>
+          <p className="text-purple-600 font-semibold text-sm sm:text-base">{persona.type}</p>
         </div>
       </div>
 
-      <p className="text-gray-600 mb-6">{persona.description}</p>
+      <p className="text-gray-600 mb-4 sm:mb-6 text-xs sm:text-base">{persona.description}</p>
 
-      <div className="space-y-4">
-        <h4 className="font-semibold text-gray-900">Recommended for you:</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="space-y-2 sm:space-y-4">
+        <h4 className="font-semibold text-gray-900 text-sm sm:text-base">Recommended for you:</h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
           {persona.recommendations.map((recommendation, index) => (
             <div
               key={index}
-              className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg"
+              className="flex items-center gap-2 p-2 sm:p-3 bg-purple-50 rounded-lg"
             >
               <Award className="h-4 w-4 text-purple-600" />
-              <span className="text-sm text-purple-700">{recommendation}</span>
+              <span className="text-xs sm:text-sm text-purple-700">{recommendation}</span>
             </div>
           ))}
         </div>

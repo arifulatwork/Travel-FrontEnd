@@ -28,24 +28,24 @@ const NotificationsScreen = () => {
   ];
 
   return (
-    <div className="p-4">
-      <h2 className="text-2xl font-bold mb-6">Notifications</h2>
-      <div className="space-y-4">
+    <div className="p-2 sm:p-4">
+      <h2 className="text-lg sm:text-2xl font-bold mb-4 sm:mb-6">Notifications</h2>
+      <div className="space-y-2 sm:space-y-4">
         {notifications.map((notification) => (
-          <div key={notification.id} className="bg-white p-4 rounded-lg shadow-sm">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center space-x-3">
+          <div key={notification.id} className="bg-white p-2 sm:p-4 rounded-lg shadow-sm">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+              <div className="flex items-center space-x-2 sm:space-x-3">
                 {notification.type === 'offer' ? (
                   <Tag className="text-green-500" />
                 ) : (
                   <Clock className="text-blue-500" />
                 )}
                 <div>
-                  <h3 className="font-semibold">{notification.title}</h3>
-                  <p className="text-gray-600">{notification.message}</p>
+                  <h3 className="font-semibold text-sm sm:text-base">{notification.title}</h3>
+                  <p className="text-xs sm:text-sm text-gray-600">{notification.message}</p>
                 </div>
               </div>
-              <span className="text-sm text-gray-500">{notification.timestamp}</span>
+              <span className="text-xs sm:text-sm text-gray-500">{notification.timestamp}</span>
             </div>
           </div>
         ))}

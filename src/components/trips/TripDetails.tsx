@@ -66,76 +66,76 @@ const TripDetails: React.FC<TripDetailsProps> = ({
   const isMultiDay = highlights.length > 0 && 'day' in highlights[0];
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden w-full max-w-full sm:max-w-3xl mx-auto">
       {/* Image and Special Offer Banner */}
-      <div className="relative h-96">
+      <div className="relative h-56 sm:h-96">
         <img 
           src={image} 
           alt={title}
           className="w-full h-full object-cover"
         />
         {specialOffer && (
-          <div className="absolute top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg">
-            <div className="font-bold">{specialOffer.type}</div>
-            <div className="text-sm">{specialOffer.description}</div>
+          <div className="absolute top-2 sm:top-4 right-2 sm:right-4 bg-red-500 text-white px-2 sm:px-4 py-1 sm:py-2 rounded-lg">
+            <div className="font-bold text-xs sm:text-base">{specialOffer.type}</div>
+            <div className="text-[10px] sm:text-sm">{specialOffer.description}</div>
           </div>
         )}
       </div>
 
       {/* Content Area */}
-      <div className="p-8">
+      <div className="p-2 sm:p-8">
         {/* Title and Description */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold dark:text-white mb-2">{title}</h1>
-          <p className="text-gray-600 dark:text-gray-300">{description}</p>
+        <div className="mb-3 sm:mb-6">
+          <h1 className="text-lg sm:text-3xl font-bold dark:text-white mb-1 sm:mb-2">{title}</h1>
+          <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-base">{description}</p>
         </div>
 
         {/* Key Info and Booking */}
-        <div className="grid md:grid-cols-2 gap-8 mb-8">
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 mb-4 sm:mb-8">
+          <div className="space-y-2 sm:space-y-4">
+            <div className="flex items-center gap-2 text-xs sm:text-base text-gray-600 dark:text-gray-300">
               <Clock className="h-5 w-5 text-purple-600" />
               <span>Duration: {duration} {duration === 1 ? 'day' : 'days'}</span>
             </div>
             {startTime && endTime && (
-              <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+              <div className="flex items-center gap-2 text-xs sm:text-base text-gray-600 dark:text-gray-300">
                 <Calendar className="h-5 w-5 text-purple-600" />
                 <span>{startTime} - {endTime}</span>
               </div>
             )}
             {meetingPoint && (
-              <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+              <div className="flex items-center gap-2 text-xs sm:text-base text-gray-600 dark:text-gray-300">
                 <MapPin className="h-5 w-5 text-purple-600" />
                 <span>Meeting Point: {meetingPoint}</span>
               </div>
             )}
-            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+            <div className="flex items-center gap-2 text-xs sm:text-base text-gray-600 dark:text-gray-300">
               <Users className="h-5 w-5 text-purple-600" />
               <span>Maximum {maxParticipants} participants</span>
             </div>
           </div>
 
-          <div className="bg-purple-50 dark:bg-purple-900/20 p-6 rounded-xl">
-            <div className="mb-4">
-              <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+          <div className="bg-purple-50 dark:bg-purple-900/20 p-3 sm:p-6 rounded-xl">
+            <div className="mb-2 sm:mb-4">
+              <div className="text-lg sm:text-3xl font-bold text-purple-600 dark:text-purple-400">
                 €{price}
               </div>
               {originalPrice && (
-                <div className="text-gray-500 line-through">€{originalPrice}</div>
+                <div className="text-xs sm:text-gray-500 line-through">€{originalPrice}</div>
               )}
-              <div className="text-sm text-gray-600 dark:text-gray-400">per person</div>
+              <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">per person</div>
             </div>
             {isBooked ? (
               <button
                 onClick={onViewDetails}
-                className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors"
+                className="w-full bg-purple-600 text-white py-2 sm:py-3 px-2 sm:px-4 rounded-lg hover:bg-purple-700 transition-colors text-xs sm:text-base"
               >
                 View Booking Details
               </button>
             ) : (
               <button
                 onClick={onBook}
-                className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors"
+                className="w-full bg-purple-600 text-white py-2 sm:py-3 px-2 sm:px-4 rounded-lg hover:bg-purple-700 transition-colors text-xs sm:text-base"
               >
                 Book Now
               </button>
@@ -144,23 +144,23 @@ const TripDetails: React.FC<TripDetailsProps> = ({
         </div>
 
         {/* Detailed Itinerary */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4 dark:text-white">Detailed Itinerary</h2>
-          <div className="space-y-6">
+        <div className="mb-4 sm:mb-8">
+          <h2 className="text-base sm:text-xl font-semibold mb-2 sm:mb-4 dark:text-white">Detailed Itinerary</h2>
+          <div className="space-y-3 sm:space-y-6">
             {isMultiDay ? (
               highlights.map((day, index) => (
                 'day' in day && (
-                  <div key={index} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
-                    <h3 className="text-lg font-semibold mb-4 dark:text-white">Day {day.day}</h3>
-                    <div className="space-y-4">
+                  <div key={index} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 sm:p-6">
+                    <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-4 dark:text-white">Day {day.day}</h3>
+                    <div className="space-y-2 sm:space-y-4">
                       {day.activities?.map((activity, actIndex) => (
-                        <div key={actIndex} className="flex gap-4">
-                          <div className="w-20 text-purple-600 dark:text-purple-400 font-medium">
+                        <div key={actIndex} className="flex gap-2 sm:gap-4">
+                          <div className="w-16 sm:w-20 text-purple-600 dark:text-purple-400 font-medium">
                             {activity.time}
                           </div>
                           <div>
-                            <div className="font-medium dark:text-white">{activity.activity}</div>
-                            <div className="text-gray-600 dark:text-gray-300 text-sm">
+                            <div className="font-medium dark:text-white text-xs sm:text-base">{activity.activity}</div>
+                            <div className="text-gray-600 dark:text-gray-300 text-[10px] sm:text-sm">
                               {activity.description}
                             </div>
                           </div>
@@ -171,17 +171,17 @@ const TripDetails: React.FC<TripDetailsProps> = ({
                 )
               ))
             ) : (
-              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
-                <div className="space-y-4">
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 sm:p-6">
+                <div className="space-y-2 sm:space-y-4">
                   {highlights.map((activity, index) => (
                     'time' in activity && (
-                      <div key={index} className="flex gap-4">
-                        <div className="w-20 text-purple-600 dark:text-purple-400 font-medium">
+                      <div key={index} className="flex gap-2 sm:gap-4">
+                        <div className="w-16 sm:w-20 text-purple-600 dark:text-purple-400 font-medium">
                           {activity.time}
                         </div>
                         <div>
-                          <div className="font-medium dark:text-white">{activity.activity}</div>
-                          <div className="text-gray-600 dark:text-gray-300 text-sm">
+                          <div className="font-medium dark:text-white text-xs sm:text-base">{activity.activity}</div>
+                          <div className="text-gray-600 dark:text-gray-300 text-[10px] sm:text-sm">
                             {activity.description}
                           </div>
                         </div>
@@ -196,11 +196,11 @@ const TripDetails: React.FC<TripDetailsProps> = ({
 
         {/* What's Included */}
         {included.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4 dark:text-white">What's Included</h2>
-            <ul className="grid grid-cols-2 gap-4">
+          <div className="mb-4 sm:mb-8">
+            <h2 className="text-base sm:text-xl font-semibold mb-2 sm:mb-4 dark:text-white">What's Included</h2>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
               {included.map((item, index) => (
-                <li key={index} className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+                <li key={index} className="flex items-center gap-2 text-xs sm:text-base text-gray-600 dark:text-gray-300">
                   <Info className="h-5 w-5 text-purple-600" />
                   {item}
                 </li>
@@ -211,9 +211,9 @@ const TripDetails: React.FC<TripDetailsProps> = ({
 
         {/* Learning Outcomes */}
         {learningOutcomes.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4 dark:text-white">Learning Outcomes</h2>
-            <ul className="list-disc pl-6 text-gray-600 dark:text-gray-300">
+          <div className="mb-4 sm:mb-8">
+            <h2 className="text-base sm:text-xl font-semibold mb-2 sm:mb-4 dark:text-white">Learning Outcomes</h2>
+            <ul className="list-disc pl-4 sm:pl-6 text-xs sm:text-base text-gray-600 dark:text-gray-300">
               {learningOutcomes.map((item, idx) => (
                 <li key={idx}>{item.item}</li>
               ))}
@@ -223,9 +223,9 @@ const TripDetails: React.FC<TripDetailsProps> = ({
 
         {/* Personal Development */}
         {personalDevelopment.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4 dark:text-white">Personal Development</h2>
-            <ul className="list-disc pl-6 text-gray-600 dark:text-gray-300">
+          <div className="mb-4 sm:mb-8">
+            <h2 className="text-base sm:text-xl font-semibold mb-2 sm:mb-4 dark:text-white">Personal Development</h2>
+            <ul className="list-disc pl-4 sm:pl-6 text-xs sm:text-base text-gray-600 dark:text-gray-300">
               {personalDevelopment.map((item, idx) => (
                 <li key={idx}>{item.item}</li>
               ))}
@@ -235,9 +235,9 @@ const TripDetails: React.FC<TripDetailsProps> = ({
 
         {/* Certifications */}
         {certifications.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4 dark:text-white">Certifications</h2>
-            <ul className="list-disc pl-6 text-gray-600 dark:text-gray-300">
+          <div className="mb-4 sm:mb-8">
+            <h2 className="text-base sm:text-xl font-semibold mb-2 sm:mb-4 dark:text-white">Certifications</h2>
+            <ul className="list-disc pl-4 sm:pl-6 text-xs sm:text-base text-gray-600 dark:text-gray-300">
               {certifications.map((item, idx) => (
                 <li key={idx}>{item.item}</li>
               ))}
@@ -247,9 +247,9 @@ const TripDetails: React.FC<TripDetailsProps> = ({
 
         {/* Environmental Impact */}
         {environmentalImpact.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4 dark:text-white">Environmental Impact</h2>
-            <ul className="list-disc pl-6 text-gray-600 dark:text-gray-300">
+          <div className="mb-4 sm:mb-8">
+            <h2 className="text-base sm:text-xl font-semibold mb-2 sm:mb-4 dark:text-white">Environmental Impact</h2>
+            <ul className="list-disc pl-4 sm:pl-6 text-xs sm:text-base text-gray-600 dark:text-gray-300">
               {environmentalImpact.map((item, idx) => (
                 <li key={idx}>{item.item}</li>
               ))}
@@ -259,9 +259,9 @@ const TripDetails: React.FC<TripDetailsProps> = ({
 
         {/* Community Benefits */}
         {communityBenefits.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4 dark:text-white">Community Benefits</h2>
-            <ul className="list-disc pl-6 text-gray-600 dark:text-gray-300">
+          <div className="mb-4 sm:mb-8">
+            <h2 className="text-base sm:text-xl font-semibold mb-2 sm:mb-4 dark:text-white">Community Benefits</h2>
+            <ul className="list-disc pl-4 sm:pl-6 text-xs sm:text-base text-gray-600 dark:text-gray-300">
               {communityBenefits.map((item, idx) => (
                 <li key={idx}>{item.item}</li>
               ))}

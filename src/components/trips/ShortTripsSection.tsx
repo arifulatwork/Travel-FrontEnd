@@ -7,6 +7,18 @@ import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js';
 import TripCard from './TripCard';
 import TripDetails from './TripDetails';
 
+// Add missing types for linter
+interface Activity {
+  time: string;
+  activity: string;
+  description: string;
+}
+
+interface DayActivities {
+  day: number;
+  activities: Activity[];
+}
+
 interface ShortTripsSectionProps {
   maxPrice: number;
   selectedType: string | null;
@@ -461,22 +473,22 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
   }
 
   return (
-    <div className="p-4 space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div className="p-2 sm:p-4 space-y-6 sm:space-y-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
         {categories.map(category => {
           const IconComponent = iconMap[category.icon] || Info;
           return (
             <button
               key={category.id}
               onClick={() => setActiveCategory(activeCategory === category.slug ? null : category.slug)}
-              className={`p-4 rounded-xl border-2 transition-all ${
+              className={`p-3 sm:p-4 rounded-xl border-2 transition-all text-xs sm:text-base ${
                 activeCategory === category.slug
                   ? 'border-purple-600 bg-purple-50'
                   : 'border-gray-200 hover:border-purple-200'
               }`}
             >
-              <div className="flex flex-col items-center text-center gap-2">
-                <IconComponent className={`h-6 w-6 ${
+              <div className="flex flex-col items-center text-center gap-1 sm:gap-2">
+                <IconComponent className={`h-5 w-5 sm:h-6 sm:w-6 ${
                   activeCategory === category.slug ? 'text-purple-600' : 'text-gray-500'
                 }`} />
                 <h3 className={`font-medium ${
@@ -484,20 +496,28 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
                 }`}>
                   {category.name}
                 </h3>
-                <p className="text-sm text-gray-600">{category.description}</p>
+                <p className="text-[10px] sm:text-sm text-gray-600">{category.description}</p>
               </div>
             </button>
           );
         })}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {filteredTrips.map(trip => {
           const isBooked = bookedSlugs.includes(trip.slug);
+          let highlightsProp: (DayActivities | Activity)[] | undefined = undefined;
+          if (Array.isArray(trip.highlights) && trip.highlights.length > 0) {
+            if ('item' in trip.highlights[0]) {
+              highlightsProp = trip.highlights.map((h: any) => ({ time: '', activity: h.item, description: '' })) as Activity[];
+            } else if ('day' in trip.highlights[0] || 'activity' in trip.highlights[0]) {
+              highlightsProp = trip.highlights;
+            }
+          }
           return (
             <div key={trip.slug} className="relative">
               {trip.discount_percentage > 0 && (
-                <div className="absolute top-4 right-4 z-10 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+                <div className="absolute top-2 right-2 z-10 bg-red-500 text-white px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium">
                   {trip.discount_percentage}% OFF
                 </div>
               )}
@@ -512,8 +532,7 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
                 startTime={"09:00 AM"}
                 meetingPoint={"Beachside Entrance"}
                 maxParticipants={trip.max_participants || 0}
-                highlights={trip.highlights}
-                specialOffer={null}
+                {...(highlightsProp ? { highlights: highlightsProp } : {})}
                 onClick={() => setSelectedTrip(trip.slug)}
                 isBooked={isBooked}
               />
@@ -523,10 +542,10 @@ const ShortTripsSection: React.FC<ShortTripsSectionProps> = ({
       </div>
 
       {filteredTrips.length === 0 && !loading && (
-        <div className="text-center py-12 bg-gray-50 rounded-xl">
-          <Info className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No trips found</h3>
-          <p className="text-gray-600">
+        <div className="text-center py-8 sm:py-12 bg-gray-50 rounded-xl">
+          <Info className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-2 sm:mb-4" />
+          <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-1 sm:mb-2">No trips found</h3>
+          <p className="text-xs sm:text-base text-gray-600">
             Try adjusting your filters or search criteria
           </p>
         </div>
