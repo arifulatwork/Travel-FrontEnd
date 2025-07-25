@@ -142,7 +142,8 @@ function App() {
   return (
     <Router>
       <Elements stripe={stripePromise}>
-        <div className={`min-h-screen ${settings.appearance.darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
+        <div className={`min-h-screen flex flex-col md:flex-row ${settings.appearance.darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
+          {/* Navigation Sidebar / Bottom Navigation */}
           <Navigation
             activeTab={activeTab}
             setActiveTab={handleTabChange}
@@ -150,7 +151,8 @@ function App() {
             translations={TRANSLATIONS.en}
           />
 
-          <main className={`flex-1 p-8 ml-64 ${settings.appearance.darkMode ? 'text-white' : 'text-gray-900'}`}>
+          {/* Main Content */}
+          <main className={`flex-1 p-4 md:p-8 md:ml-64 ${settings.appearance.darkMode ? 'text-white' : 'text-gray-900'}`}>
             {renderContent()}
           </main>
         </div>
