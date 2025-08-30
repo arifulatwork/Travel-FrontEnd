@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Search, DollarSign, User, Users, ArrowLeft, Coffee, Music, Utensils, Palette, Search as SearchIcon, X, Calendar, Info, Check, CreditCard, ChevronDown, Sun, Moon, Plane, AlertCircle } from 'lucide-react';
+import { Search, DollarSign, User, Users, ArrowLeft, Coffee,Laptop, Music, Utensils, Palette, Search as SearchIcon, X, Calendar, Info, Check, CreditCard, ChevronDown, Sun, Moon, Plane, AlertCircle } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import DestinationCard from './DestinationCard';
 import DestinationDetails from './DestinationDetails';
 import LocalTouchSection from './LocalTouchSection';
 import BalkanTripsSection from './trips/BalkanTripsSection';
+import InternshipMarketplace from './trips/InternshipMarketplace';
 import MontenegroTripsSection from './trips/MontenegroTripsSection';
 import PetraTripsSection from './trips/PetraTripsSection';
 import ShortTripsSection from './trips/ShortTripsSection';
@@ -66,7 +67,7 @@ const ExploreSection: React.FC<ExploreProps> = () => {
   const [selectedDestination, setSelectedDestination] = useState<string | null>(null);
   const [selectedDestinationDetails, setSelectedDestinationDetails] = useState<DestinationDetailsData | null>(null);
   const [visitType, setVisitType] = useState<'individual' | 'group'>('individual');
-  const [activeSection, setActiveSection] = useState<'short-trips' | 'destinations' | 'local' | 'balkan-trips' | 'montenegro-tours' | 'petra-tours'>('destinations');
+  const [activeSection, setActiveSection] = useState<'short-trips' | 'destinations' | 'local' | 'intern-tours'| 'balkan-trips' | 'montenegro-tours' | 'petra-tours'>('destinations');
   const [selectedTripType, setSelectedTripType] = useState<string | null>(null);
   const [destinations, setDestinations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -278,6 +279,19 @@ const ExploreSection: React.FC<ExploreProps> = () => {
             Local Touch
           </button>
           <button
+          onClick={() => setActiveSection('intern-tours')}
+          className={`px-4 py-2 font-medium flex items-center gap-2 whitespace-nowrap ${
+          activeSection === 'intern-tours'
+          ? 'text-purple-600 border-b-2 border-purple-600'
+          : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+        <Laptop className="h-4 w-4" />
+        Internship
+      </button>
+
+          
+          <button
             onClick={() => setActiveSection('balkan-trips')}
             className={`px-4 py-2 font-medium flex items-center gap-2 whitespace-nowrap ${
               activeSection === 'balkan-trips'
@@ -345,6 +359,8 @@ const ExploreSection: React.FC<ExploreProps> = () => {
         <MontenegroTripsSection />
       ) : activeSection === 'petra-tours' ? (
         <PetraTripsSection />
+        ) : activeSection === 'intern-tours' ? (
+        <InternshipMarketplace />
       ) : null}
     </div>
   );
