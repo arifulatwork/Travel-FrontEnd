@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Search, 
-  Filter, 
   BookOpen, 
   Clock, 
-  DollarSign, 
   Star, 
   MapPin, 
   Calendar,
@@ -17,15 +15,18 @@ import {
   CreditCard
 } from 'lucide-react';
 
-// Types
+// ====== API base ======
+const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://127.0.0.1:8000/api';
+
+// ====== Types ======
 interface Internship {
   id: number;
   title: string;
-  category: string;
+  category: string | null; // slug
   description: string;
   duration: string;
   price: number;
-  originalPrice?: number;
+  originalPrice?: number | null;
   rating: number;
   reviewCount: number;
   company: string;
@@ -35,316 +36,205 @@ interface Internship {
   learningOutcomes: string[];
   image: string;
   featured: boolean;
-  deadline?: string;
-  spotsLeft?: number;
+  deadline?: string | null;
+  spotsLeft?: number | null;
 }
 
 interface Category {
-  id: string;
+  id: string; // slug coming from API
   name: string;
   icon: React.ComponentType<any>;
   count: number;
 }
 
+interface ApiCategory {
+  id: string;        // slug
+  name: string;
+  icon?: string | null;
+  count: number;
+}
+
+interface OptionsResponse {
+  categories: ApiCategory[];
+  locations: string[];
+  modes: string[];           // ["Remote","On-site","Hybrid"] for UI chips
+  skills: string[];
+  priceRange: [number, number];
+}
+
+interface ListResponse {
+  data: Internship[];
+  meta: {
+    total: number; per_page: number; current_page: number; last_page: number;
+  };
+}
+
 interface FilterOptions {
-  categories: string[];
+  categories: string[];                // slugs
   priceRange: [number, number];
   locations: string[];
-  modes: string[];
+  modes: string[];                     // UI strings: "Remote" | "On-site" | "Hybrid"
   skills: string[];
 }
 
-// Mock data
-const CATEGORIES: Category[] = [
-  { id: 'it', name: 'Information Technology', icon: Briefcase, count: 42 },
-  { id: 'management', name: 'Business Management', icon: Users, count: 28 },
-  { id: 'marketing', name: 'Digital Marketing', icon: Building, count: 19 },
-  { id: 'design', name: 'UI/UX Design', icon: Award, count: 15 },
-  { id: 'data', name: 'Data Science', icon: BookOpen, count: 23 },
-];
+// ====== Helpers ======
+const ICONS: Record<string, React.ComponentType<any>> = {
+  briefcase: Briefcase,
+  users: Users,
+  building: Building,
+  award: Award,
+  'book-open': BookOpen,
+};
 
-const LOCATIONS = ['North America', 'Europe', 'Asia', 'Africa', 'South America', 'Australia', 'Remote'];
-const MODES = ['Remote', 'On-site', 'Hybrid'];
-const SKILLS = ['React', 'Python', 'Leadership', 'Marketing', 'Design', 'Data Analysis', 'Project Management'];
+const toIcon = (icon?: string | null) => {
+  if (!icon) return Briefcase;
+  return ICONS[icon] ?? Briefcase;
+};
 
+const toApiMode = (uiMode: string) =>
+  uiMode.toLowerCase() as 'remote' | 'on-site' | 'hybrid';
+
+const mapApiCategoryToUI = (c: ApiCategory): Category => ({
+  id: c.id,
+  name: c.name,
+  icon: toIcon(c.icon),
+  count: c.count,
+});
+
+function paramsToQuery(params: Record<string, any>) {
+  const usp = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v == null || v === '' || (Array.isArray(v) && v.length === 0)) return;
+    if (Array.isArray(v)) v.forEach(item => usp.append(`${k}[]`, String(item)));
+    else usp.append(k, String(v));
+  });
+  return usp.toString();
+}
+
+// ====== Component ======
 const InternshipMarketplace: React.FC = () => {
   const [internships, setInternships] = useState<Internship[]>([]);
   const [filteredInternships, setFilteredInternships] = useState<Internship[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedInternship, setSelectedInternship] = useState<Internship | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
+
+  // Server-powered options
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [locations, setLocations] = useState<string[]>([]);
+  const [modes, setModes] = useState<string[]>([]); // UI strings
+  const [skills, setSkills] = useState<string[]>([]);
+  const [sort, setSort] = useState<'popularity' | 'price_asc' | 'price_desc' | 'rating' | 'newest'>('popularity');
+
   const [filters, setFilters] = useState<FilterOptions>({
     categories: [],
     priceRange: [0, 5000],
     locations: [],
     modes: [],
-    skills: []
+    skills: [],
   });
 
-  // Load mock data
+  // ---- Fetch options on mount ----
   useEffect(() => {
-    const loadInternships = async () => {
-      setLoading(true);
-      // Simulate API call
-      setTimeout(() => {
-        const mockInternships: Internship[] = [
-          {
-            id: 1,
-            title: 'Frontend Development Intern',
-            category: 'it',
-            description: 'Join our dynamic team to build cutting-edge web applications using React and TypeScript.',
-            duration: '3 months',
-            price: 299,
-            originalPrice: 399,
-            rating: 4.8,
-            reviewCount: 142,
-            company: 'TechInnovate Inc.',
-            location: 'North America',
-            mode: 'remote',
-            skills: ['React', 'TypeScript', 'CSS', 'JavaScript'],
-            learningOutcomes: [
-              'Master React and modern frontend frameworks',
-              'Learn to work in agile development teams',
-              'Build portfolio-worthy projects'
-            ],
-            image: '/api/placeholder/300/200?text=Frontend+Intern',
-            featured: true,
-            deadline: '2023-11-30',
-            spotsLeft: 5
-          },
-          {
-            id: 2,
-            title: 'IT Project Management Intern',
-            category: 'management',
-            description: 'Gain hands-on experience managing IT projects from conception to delivery.',
-            duration: '4 months',
-            price: 349,
-            rating: 4.6,
-            reviewCount: 89,
-            company: 'GlobalTech Solutions',
-            location: 'Europe',
-            mode: 'hybrid',
-            skills: ['Project Management', 'Agile', 'Scrum', 'JIRA'],
-            learningOutcomes: [
-              'Learn project management methodologies',
-              'Develop leadership and team coordination skills',
-              'Understand budgeting and resource allocation'
-            ],
-            image: '/api/placeholder/300/200?text=IT+Management',
-            featured: true,
-            spotsLeft: 8
-          },
-          {
-            id: 3,
-            title: 'Data Science Internship',
-            category: 'data',
-            description: 'Work with large datasets and build machine learning models in a real-world environment.',
-            duration: '6 months',
-            price: 449,
-            originalPrice: 549,
-            rating: 4.9,
-            reviewCount: 217,
-            company: 'DataInsights Corp',
-            location: 'Asia',
-            mode: 'on-site',
-            skills: ['Python', 'Machine Learning', 'SQL', 'Data Visualization'],
-            learningOutcomes: [
-              'Master data cleaning and preprocessing techniques',
-              'Build and evaluate machine learning models',
-              'Create compelling data visualizations'
-            ],
-            image: '/api/placeholder/300/200?text=Data+Science',
-            featured: false,
-            deadline: '2023-12-15'
-          },
-          {
-            id: 4,
-            title: 'Digital Marketing Intern',
-            category: 'marketing',
-            description: 'Develop and execute digital marketing campaigns across various platforms.',
-            duration: '3 months',
-            price: 249,
-            rating: 4.5,
-            reviewCount: 93,
-            company: 'NextGen Media',
-            location: 'Remote',
-            mode: 'remote',
-            skills: ['SEO', 'Social Media', 'Content Marketing', 'Analytics'],
-            learningOutcomes: [
-              'Plan and execute multi-channel marketing campaigns',
-              'Analyze campaign performance with analytics tools',
-              'Optimize content for search engines'
-            ],
-            image: '/api/placeholder/300/200?text=Marketing',
-            featured: false
-          },
-          {
-            id: 5,
-            title: 'UI/UX Design Intern',
-            category: 'design',
-            description: 'Create intuitive and beautiful user interfaces for our product suite.',
-            duration: '4 months',
-            price: 329,
-            originalPrice: 399,
-            rating: 4.7,
-            reviewCount: 124,
-            company: 'DesignCraft Studios',
-            location: 'North America',
-            mode: 'hybrid',
-            skills: ['Figma', 'User Research', 'Wireframing', 'Prototyping'],
-            learningOutcomes: [
-              'Conduct user research and usability testing',
-              'Create wireframes and interactive prototypes',
-              'Design responsive interfaces for multiple devices'
-            ],
-            image: '/api/placeholder/300/200?text=UI/UX+Design',
-            featured: true,
-            spotsLeft: 3
-          },
-          {
-            id: 6,
-            title: 'Business Analytics Intern',
-            category: 'data',
-            description: 'Help businesses make data-driven decisions through analytical insights.',
-            duration: '5 months',
-            price: 399,
-            rating: 4.6,
-            reviewCount: 78,
-            company: 'StrategyPlus Consultants',
-            location: 'Europe',
-            mode: 'remote',
-            skills: ['Excel', 'SQL', 'Tableau', 'Statistical Analysis'],
-            learningOutcomes: [
-              'Transform raw data into actionable insights',
-              'Create dashboards and reports for stakeholders',
-              'Develop predictive models for business forecasting'
-            ],
-            image: '/api/placeholder/300/200?text=Business+Analytics',
-            featured: false
-          }
-        ];
-        setInternships(mockInternships);
-        setFilteredInternships(mockInternships);
-        setLoading(false);
-      }, 800);
-    };
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`${API_BASE}/internships/options`);
+        if (!res.ok) throw new Error('Failed to load options');
+        const data: OptionsResponse = await res.json();
 
-    loadInternships();
+        setCategories(data.categories.map(mapApiCategoryToUI));
+        setLocations(data.locations);
+        setModes(data.modes); // UI strings
+        setSkills(data.skills);
+        // init price range from DB
+        setFilters(f => ({ ...f, priceRange: data.priceRange }));
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
-  // Apply filters
+  // ---- Fetch internships whenever filters/search/sort change ----
   useEffect(() => {
-    let result = [...internships];
-    
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(internship => 
-        internship.title.toLowerCase().includes(query) ||
-        internship.description.toLowerCase().includes(query) ||
-        internship.company.toLowerCase().includes(query) ||
-        internship.skills.some(skill => skill.toLowerCase().includes(query))
-      );
-    }
-    
-    // Category filter
-    if (filters.categories.length > 0) {
-      result = result.filter(internship => 
-        filters.categories.includes(internship.category)
-      );
-    }
-    
-    // Price filter
-    result = result.filter(internship => 
-      internship.price >= filters.priceRange[0] && 
-      internship.price <= filters.priceRange[1]
-    );
-    
-    // Location filter
-    if (filters.locations.length > 0) {
-      result = result.filter(internship => 
-        filters.locations.includes(internship.location)
-      );
-    }
-    
-    // Mode filter
-    if (filters.modes.length > 0) {
-      result = result.filter(internship => 
-        filters.modes.map(m => m.toLowerCase()).includes(internship.mode)
-      );
-    }
-    
-    // Skills filter
-    if (filters.skills.length > 0) {
-      result = result.filter(internship => 
-        filters.skills.some(skill => 
-          internship.skills.map(s => s.toLowerCase()).includes(skill.toLowerCase())
-        )
-      );
-    }
-    
-    setFilteredInternships(result);
-  }, [searchQuery, filters, internships]);
+    (async () => {
+      try {
+        setLoading(true);
+        const query = paramsToQuery({
+          search: searchQuery || undefined,
+          categories: filters.categories,                // slugs
+          locations: filters.locations,
+          modes: filters.modes.map(toApiMode),
+          skills: filters.skills,
+          price_min: filters.priceRange[0],
+          price_max: filters.priceRange[1],
+          sort,
+          per_page: 60,
+        });
+        const res = await fetch(`${API_BASE}/internships?${query}`);
+        if (!res.ok) throw new Error('Failed to load internships');
+        const data: ListResponse = await res.json();
+
+        setInternships(data.data);
+        setFilteredInternships(data.data); // already filtered server-side
+      } catch (err) {
+        console.error(err);
+        setInternships([]);
+        setFilteredInternships([]);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [searchQuery, filters, sort]);
 
   const handleFilterChange = (filterType: keyof FilterOptions, value: any) => {
     setFilters(prev => ({
       ...prev,
-      [filterType]: value
+      [filterType]: value,
     }));
   };
 
   const toggleFilter = (filterType: keyof FilterOptions, item: string) => {
     setFilters(prev => {
-      const currentFilters = [...prev[filterType]] as string[];
-      const index = currentFilters.indexOf(item);
-      
-      if (index >= 0) {
-        currentFilters.splice(index, 1);
-      } else {
-        currentFilters.push(item);
-      }
-      
-      return {
-        ...prev,
-        [filterType]: currentFilters
-      };
+      const current = new Set(prev[filterType] as string[]);
+      if (current.has(item)) current.delete(item);
+      else current.add(item);
+      return { ...prev, [filterType]: Array.from(current) } as FilterOptions;
     });
   };
 
   const clearFilters = () => {
     setFilters({
       categories: [],
-      priceRange: [0, 5000],
+      priceRange: [...filters.priceRange] as [number, number], // keep current DB range
       locations: [],
       modes: [],
-      skills: []
+      skills: [],
     });
     setSearchQuery('');
+    setSort('popularity');
   };
 
   const handleEnroll = (internship: Internship) => {
     setSelectedInternship(internship);
-    // In a real app, this would open a payment modal or redirect to a checkout page
+    // TODO: open Stripe Checkout or your payment flow
   };
 
-  const renderStars = (rating: number) => {
-    return (
-      <div className="flex items-center">
-        {[1, 2, 3, 4, 5].map(star => (
-          <Star 
-            key={star} 
-            className={`h-4 w-4 ${
-              star <= Math.floor(rating) 
-                ? 'text-yellow-400 fill-current' 
-                : 'text-gray-300'
-            }`} 
-          />
-        ))}
-        <span className="ml-1 text-sm text-gray-600">({rating})</span>
-      </div>
-    );
-  };
+  const renderStars = (rating: number) => (
+    <div className="flex items-center">
+      {[1, 2, 3, 4, 5].map(star => (
+        <Star
+          key={star}
+          className={`h-4 w-4 ${
+            star <= Math.floor(rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'
+          }`}
+        />
+      ))}
+      <span className="ml-1 text-sm text-gray-600">({rating})</span>
+    </div>
+  );
 
   if (loading) {
     return (
@@ -377,7 +267,7 @@ const InternshipMarketplace: React.FC = () => {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Filters Sidebar - Always visible on large screens */}
+          {/* Filters Sidebar */}
           <div className="lg:w-72 flex-shrink-0">
             <div className="bg-white rounded-lg shadow-sm p-4 mb-6 lg:mb-0">
               <div className="flex justify-between items-center mb-4">
@@ -389,7 +279,7 @@ const InternshipMarketplace: React.FC = () => {
                   Clear all
                 </button>
               </div>
-              
+
               {/* Search inside filters */}
               <div className="mb-4">
                 <div className="relative">
@@ -403,22 +293,22 @@ const InternshipMarketplace: React.FC = () => {
                   />
                 </div>
               </div>
-              
+
               {/* Scrollable filters container */}
               <div className="overflow-y-auto max-h-[calc(100vh-250px)] pr-2">
                 {/* Categories Filter */}
                 <div className="mb-6">
                   <h3 className="text-sm font-medium text-gray-700 mb-2">Categories</h3>
                   <div className="space-y-1">
-                    {CATEGORIES.map(category => {
+                    {categories.map(category => {
                       const Icon = category.icon;
                       return (
                         <div key={category.id} className="flex items-center">
                           <button
                             onClick={() => toggleFilter('categories', category.id)}
                             className={`flex items-center flex-1 text-left p-2 rounded-md text-sm ${
-                              filters.categories.includes(category.id) 
-                                ? 'bg-purple-100 text-purple-800' 
+                              filters.categories.includes(category.id)
+                                ? 'bg-purple-100 text-purple-800'
                                 : 'text-gray-700 hover:bg-gray-100'
                             }`}
                           >
@@ -436,13 +326,13 @@ const InternshipMarketplace: React.FC = () => {
                 <div className="mb-6">
                   <h3 className="text-sm font-medium text-gray-700 mb-2">Location</h3>
                   <div className="space-y-1">
-                    {LOCATIONS.map(location => (
+                    {locations.map(location => (
                       <div key={location} className="flex items-center">
                         <button
                           onClick={() => toggleFilter('locations', location)}
                           className={`flex items-center flex-1 text-left p-2 rounded-md text-sm ${
-                            filters.locations.includes(location) 
-                              ? 'bg-purple-100 text-purple-800' 
+                            filters.locations.includes(location)
+                              ? 'bg-purple-100 text-purple-800'
                               : 'text-gray-700 hover:bg-gray-100'
                           }`}
                         >
@@ -458,13 +348,13 @@ const InternshipMarketplace: React.FC = () => {
                 <div className="mb-6">
                   <h3 className="text-sm font-medium text-gray-700 mb-2">Work Mode</h3>
                   <div className="space-y-1">
-                    {MODES.map(mode => (
+                    {modes.map(mode => (
                       <div key={mode} className="flex items-center">
                         <button
                           onClick={() => toggleFilter('modes', mode)}
                           className={`flex items-center flex-1 text-left p-2 rounded-md text-sm ${
-                            filters.modes.includes(mode) 
-                              ? 'bg-purple-100 text-purple-800' 
+                            filters.modes.includes(mode)
+                              ? 'bg-purple-100 text-purple-800'
                               : 'text-gray-700 hover:bg-gray-100'
                           }`}
                         >
@@ -480,13 +370,13 @@ const InternshipMarketplace: React.FC = () => {
                 <div className="mb-6">
                   <h3 className="text-sm font-medium text-gray-700 mb-2">Skills</h3>
                   <div className="space-y-1">
-                    {SKILLS.map(skill => (
+                    {skills.map(skill => (
                       <div key={skill} className="flex items-center">
                         <button
                           onClick={() => toggleFilter('skills', skill)}
                           className={`flex items-center flex-1 text-left p-2 rounded-md text-sm ${
-                            filters.skills.includes(skill) 
-                              ? 'bg-purple-100 text-purple-800' 
+                            filters.skills.includes(skill)
+                              ? 'bg-purple-100 text-purple-800'
                               : 'text-gray-700 hover:bg-gray-100'
                           }`}
                         >
@@ -508,11 +398,13 @@ const InternshipMarketplace: React.FC = () => {
                     </div>
                     <input
                       type="range"
-                      min="0"
-                      max="5000"
-                      step="100"
+                      min={filters.priceRange[0]}
+                      max={filters.priceRange[1] < filters.priceRange[0] ? filters.priceRange[0] : filters.priceRange[1]}
+                      step="10"
                       value={filters.priceRange[1]}
-                      onChange={(e) => handleFilterChange('priceRange', [filters.priceRange[0], parseInt(e.target.value)])}
+                      onChange={(e) =>
+                        handleFilterChange('priceRange', [filters.priceRange[0], parseInt(e.target.value)])
+                      }
                       className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                     />
                     <div className="text-xs text-gray-600 mt-2 text-center">
@@ -533,12 +425,16 @@ const InternshipMarketplace: React.FC = () => {
               </p>
               <div className="flex items-center">
                 <span className="text-sm text-gray-600 mr-2">Sort by:</span>
-                <select className="text-sm border border-gray-300 rounded-md py-1 px-2 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500">
-                  <option>Most Popular</option>
-                  <option>Price: Low to High</option>
-                  <option>Price: High to Low</option>
-                  <option>Highest Rated</option>
-                  <option>Newest</option>
+                <select
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value as any)}
+                  className="text-sm border border-gray-300 rounded-md py-1 px-2 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                >
+                  <option value="popularity">Most Popular</option>
+                  <option value="price_asc">Price: Low to High</option>
+                  <option value="price_desc">Price: High to Low</option>
+                  <option value="rating">Highest Rated</option>
+                  <option value="newest">Newest</option>
                 </select>
               </div>
             </div>
@@ -587,16 +483,16 @@ const InternshipMarketplace: React.FC = () => {
                           <span className="text-xs text-gray-500 line-through">${internship.originalPrice}</span>
                         )}
                       </div>
-                      
+
                       <div className="flex items-center text-sm text-gray-600 mb-3">
                         <MapPin className="h-4 w-4 mr-1" />
                         <span className="mr-4">{internship.location}</span>
                         <Briefcase className="h-4 w-4 mr-1" />
                         <span className="capitalize">{internship.mode}</span>
                       </div>
-                      
+
                       <p className="text-sm text-gray-600 mb-4 line-clamp-2">{internship.description}</p>
-                      
+
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center">
                           <Clock className="h-4 w-4 text-gray-500 mr-1" />
@@ -604,7 +500,7 @@ const InternshipMarketplace: React.FC = () => {
                         </div>
                         {renderStars(internship.rating)}
                       </div>
-                      
+
                       <div className="flex flex-wrap gap-2 mb-4">
                         {internship.skills.slice(0, 3).map(skill => (
                           <span key={skill} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-md">
@@ -617,7 +513,7 @@ const InternshipMarketplace: React.FC = () => {
                           </span>
                         )}
                       </div>
-                      
+
                       <div className="flex items-center justify-between">
                         <div className="text-2xl font-bold text-gray-900">
                           ${internship.price}
@@ -629,7 +525,7 @@ const InternshipMarketplace: React.FC = () => {
                           Enroll Now
                         </button>
                       </div>
-                      
+
                       {internship.deadline && (
                         <div className="mt-3 text-xs text-gray-500 flex items-center">
                           <Calendar className="h-3 w-3 mr-1" />
@@ -658,7 +554,7 @@ const InternshipMarketplace: React.FC = () => {
                     <X className="h-6 w-6" />
                   </button>
                 </div>
-                
+
                 <div className="flex flex-col md:flex-row gap-6 mb-6">
                   <div className="md:w-1/3">
                     <img 
@@ -687,7 +583,7 @@ const InternshipMarketplace: React.FC = () => {
                         <span>{selectedInternship.company}</span>
                       </div>
                     </div>
-                    
+
                     <h3 className="text-lg font-semibold mb-2">What You'll Learn</h3>
                     <ul className="text-sm space-y-1 mb-4">
                       {selectedInternship.learningOutcomes.map((outcome, index) => (
@@ -699,7 +595,7 @@ const InternshipMarketplace: React.FC = () => {
                     </ul>
                   </div>
                 </div>
-                
+
                 <div className="border-t border-gray-200 pt-4">
                   <h3 className="text-lg font-semibold mb-3">Payment Information</h3>
                   <div className="bg-gray-50 p-4 rounded-lg mb-4">
@@ -718,7 +614,7 @@ const InternshipMarketplace: React.FC = () => {
                       <span>${selectedInternship.price}</span>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     <button className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
                       Save for later
