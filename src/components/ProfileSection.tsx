@@ -386,7 +386,7 @@ const ProfileSection: React.FC = () => {
   /** Notifications */
   const fetchNotifications = async () => {
     try {
-      const raw = await fetchJSON(`${API_BASE}/notifications`, { headers: getAuthHeaders() });
+      const raw = await fetchJSON(`${API_BASE}/auth/notifications`, { headers: getAuthHeaders() });
       const list: Notification[] = (raw || []).map((n: any) => ({
         id: String(n.id),
         title: n.title,
