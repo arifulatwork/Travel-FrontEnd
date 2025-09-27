@@ -42,7 +42,7 @@ interface Notification {
 }
 
 interface Question {
-  id: string; // normalized from backend "key"
+  id: string;
   text: string;
   options: {
     value: string;
@@ -52,7 +52,7 @@ interface Question {
     emoji?: string;
   }[];
   multiple?: boolean;
-  hasBudgetSlider?: boolean; // normalized from backend "has_budget_slider"
+  hasBudgetSlider?: boolean;
 }
 
 /** Map backend icon names -> lucide components safely */
@@ -68,7 +68,7 @@ const iconMap: Record<string, React.ElementType> = {
 const safeIcon = (name?: string): React.ElementType | undefined =>
   name && iconMap[name] ? iconMap[name] : undefined;
 
-/** -------- TravelPersonaQuiz (now receives questions from API) -------- */
+/** -------- TravelPersonaQuiz -------- */
 const TravelPersonaQuiz: React.FC<{
   questions: Question[];
   onComplete: (results: Record<string, string | string[] | number>) => void;
@@ -81,7 +81,6 @@ const TravelPersonaQuiz: React.FC<{
   );
 
   useEffect(() => {
-    // if initialAnswers has progressed answers, try to position the quiz accordingly
     const keys = questions.map(q => q.id);
     const answeredCount = keys.filter(k => answers[k] !== undefined).length;
     if (answeredCount > 0 && answeredCount < questions.length) {
@@ -99,42 +98,27 @@ const TravelPersonaQuiz: React.FC<{
 
   const handleAnswer = (questionId: string, value: string) => {
     const question = questions[currentQuestion];
-    let newAnswers;
+    let newAnswers: Record<string, any>;
 
     if (question.multiple) {
       const currentAnswers = (answers[questionId] as string[]) || [];
       if (currentAnswers.includes(value)) {
-        newAnswers = {
-          ...answers,
-          [questionId]: currentAnswers.filter(v => v !== value),
-        };
+        newAnswers = { ...answers, [questionId]: currentAnswers.filter(v => v !== value) };
       } else {
-        newAnswers = {
-          ...answers,
-          [questionId]: [...currentAnswers, value],
-        };
+        newAnswers = { ...answers, [questionId]: [...currentAnswers, value] };
       }
     } else {
-      newAnswers = {
-        ...answers,
-        [questionId]: value,
-      };
-
+      newAnswers = { ...answers, [questionId]: value };
       if (questionId === 'budgetPreference' && value === 'yes') {
         newAnswers.budgetAmount = budgetValue;
       }
-
-      if (currentQuestion < questions.length - 1) {
-        setCurrentQuestion(currentQuestion + 1);
-      }
+      if (currentQuestion < questions.length - 1) setCurrentQuestion(currentQuestion + 1);
     }
 
     setAnswers(newAnswers);
 
-    if (
-      currentQuestion === questions.length - 1 ||
-      (question.multiple && Object.keys(newAnswers).length === questions.length)
-    ) {
+    if (currentQuestion === questions.length - 1 ||
+        (question.multiple && Object.keys(newAnswers).length === questions.length)) {
       onComplete(newAnswers);
     }
   };
@@ -224,11 +208,8 @@ const TravelPersonaQuiz: React.FC<{
         {isMultiple && (
           <button
             onClick={() => {
-              if (currentQuestion < questions.length - 1) {
-                setCurrentQuestion(currentQuestion + 1);
-              } else {
-                onComplete(answers);
-              }
+              if (currentQuestion < questions.length - 1) setCurrentQuestion(currentQuestion + 1);
+              else onComplete(answers);
             }}
             className="text-sm text-purple-600"
           >
@@ -240,7 +221,7 @@ const TravelPersonaQuiz: React.FC<{
   );
 };
 
-/** -------- Interests Manager (unchanged UI, but options now fetched) -------- */
+/** -------- Interests Manager -------- */
 const InterestsManager: React.FC<{
   interests: string[];
   options: string[];
@@ -374,10 +355,11 @@ const ProfileSection: React.FC = () => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [showPersonaQuiz, setShowPersonaQuiz] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
 
-  // NEW: API-loaded state
+  // API-loaded state
   const [questions, setQuestions] = useState<Question[]>([]);
   const [interestOptions, setInterestOptions] = useState<string[]>([]);
   const [loadingPersona, setLoadingPersona] = useState<boolean>(true);
@@ -388,6 +370,7 @@ const ProfileSection: React.FC = () => {
     return {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
+      Accept: 'application/json',
     };
   };
 
@@ -400,15 +383,45 @@ const ProfileSection: React.FC = () => {
     return res.json();
   };
 
-  /** Fetch persona questions+options from API and normalize */
+  /** Notifications */
+  const fetchNotifications = async () => {
+    try {
+      const raw = await fetchJSON(`${API_BASE}/notifications`, { headers: getAuthHeaders() });
+      const list: Notification[] = (raw || []).map((n: any) => ({
+        id: String(n.id),
+        title: n.title,
+        message: n.message,
+        type: n.type,
+        isRead: !!n.is_read,
+        createdAt: n.created_at,
+      }));
+      setNotifications(list);
+    } catch (e) {
+      console.error('Failed to load notifications:', e);
+    }
+  };
+
+  // Optional: only works if you added PUT /notifications/{id}/read
+  const markNotificationRead = async (id: string) => {
+    try {
+      await fetchJSON(`${API_BASE}/notifications/${id}/read`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+      });
+      setNotifications(prev => prev.map(n => (n.id === id ? { ...n, isRead: true } : n)));
+    } catch (e) {
+      // If route not implemented yet, at least keep optimistic UI
+      console.warn('mark read failed (fallback to optimistic only):', e);
+    }
+  };
+
+  /** Travel Persona */
   const fetchTravelPersona = async () => {
     setLoadingPersona(true);
     try {
-      // Expecting: [{ id, key, text, multiple, has_budget_slider, options:[{value,label,description,emoji,icon}] }, ...]
       const data = await fetchJSON(`${API_BASE}/travel-persona/questions`, { headers: getAuthHeaders() });
-
       const normalized: Question[] = (data || []).map((q: any) => ({
-        id: q.key ?? q.id, // prefer stable 'key'
+        id: q.key ?? q.id,
         text: q.text,
         multiple: !!q.multiple,
         hasBudgetSlider: !!q.has_budget_slider,
@@ -420,17 +433,16 @@ const ProfileSection: React.FC = () => {
           icon: safeIcon(opt.icon),
         })),
       }));
-
       setQuestions(normalized);
     } catch (e) {
       console.error('Failed to load travel persona questions:', e);
-      setQuestions([]); // empty state
+      setQuestions([]);
     } finally {
       setLoadingPersona(false);
     }
   };
 
-  /** Fetch interest options (fallback to default list if API not ready) */
+  /** Interests */
   const fetchInterests = async () => {
     setLoadingInterests(true);
     const fallback = [
@@ -441,7 +453,6 @@ const ProfileSection: React.FC = () => {
       'Shopping', 'Photography', 'Sports Events', 'Road Trips',
     ];
     try {
-      // Expecting: ["Adventure Travel", "Beach Holidays", ...] or {data:[...]}
       const data = await fetchJSON(`${API_BASE}/interests`, { headers: getAuthHeaders() });
       const list = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : fallback;
       setInterestOptions(list);
@@ -470,7 +481,7 @@ const ProfileSection: React.FC = () => {
           preferences: {},
         });
 
-        // Cards (normalize your endpoints; using /auth/ here for create aligns with your code)
+        // Cards
         const cardsData = await fetchJSON(`${API_BASE}/credit-cards`, { headers: getAuthHeaders() });
         setCards(cardsData);
 
@@ -481,34 +492,9 @@ const ProfileSection: React.FC = () => {
           preferences: { ...prev.preferences, travelPersona: prefData.travel_persona || {} },
         }));
 
-        // Notifications (mock)
-        const mockNotifications: Notification[] = [
-          {
-            id: '1',
-            title: 'Welcome to TravelApp!',
-            message: 'Thank you for signing up. Start exploring amazing destinations now!',
-            isRead: false,
-            createdAt: new Date().toISOString(),
-            type: 'info',
-          },
-          {
-            id: '2',
-            title: 'Special Offer',
-            message: 'Get 20% off your first booking with code WELCOME20',
-            isRead: false,
-            createdAt: new Date(Date.now() - 86400000).toISOString(),
-            type: 'success',
-          },
-          {
-            id: '3',
-            title: 'Payment Successful',
-            message: 'Your payment for Paris trip has been processed successfully',
-            isRead: true,
-            createdAt: new Date(Date.now() - 172800000).toISOString(),
-            type: 'success',
-          },
-        ];
-        setNotifications(mockNotifications);
+        // Notifications (REAL)
+        await fetchNotifications();
+
       } catch (err) {
         console.error('Error fetching profile data:', err);
       } finally {
@@ -627,12 +613,18 @@ const ProfileSection: React.FC = () => {
       setSelectedNotification(null);
     } else {
       setActiveSection('notifications');
+      fetchNotifications(); // refresh on open
     }
   };
 
   const handleNotificationClick = (notification: Notification) => {
     setSelectedNotification(notification);
-    setNotifications(prev => prev.map(n => (n.id === notification.id ? { ...n, isRead: true } : n)));
+    if (!notification.isRead) {
+      // Optimistic UI
+      setNotifications(prev => prev.map(n => (n.id === notification.id ? { ...n, isRead: true } : n)));
+      // Sync to backend if route exists
+      markNotificationRead(notification.id);
+    }
   };
 
   const closeNotificationDetail = () => setSelectedNotification(null);
@@ -667,7 +659,7 @@ const ProfileSection: React.FC = () => {
               </div>
             )}
 
-            {/* Interests Section (options from API) */}
+            {/* Interests Section */}
             {!loadingInterests && (
               <InterestsManager
                 interests={profile.interests || []}
