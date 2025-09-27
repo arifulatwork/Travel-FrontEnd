@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, ChevronRight, Settings, Bell, Shield, HelpCircle, MapPin, Edit, Plus, X, Compass, Check, Users, Activity, DollarSign, Calendar } from 'lucide-react';
+import { CreditCard, ChevronRight, Settings, Bell, Shield, HelpCircle, MapPin, Edit, Plus, X, Compass, Check, Users, Activity, DollarSign, Calendar, Heart, Tag } from 'lucide-react';
 
 interface CreditCardType {
   id: string;
@@ -21,6 +21,7 @@ interface Profile {
   email: string;
   avatar_url?: string;
   location?: string;
+  interests?: string[];
   preferences?: {
     travelPersona?: Record<string, string | string[] | number>;
   };
@@ -48,6 +49,14 @@ interface Question {
   multiple?: boolean;
   hasBudgetSlider?: boolean;
 }
+
+const interestsOptions = [
+  'Adventure Travel', 'Beach Holidays', 'Mountain Trekking', 'City Breaks',
+  'Cultural Experiences', 'Food & Wine', 'Wildlife Safari', 'Luxury Travel',
+  'Budget Travel', 'Solo Travel', 'Family Vacations', 'Romantic Getaways',
+  'Historical Sites', 'Art & Museums', 'Music Festivals', 'Wellness Retreats',
+  'Shopping', 'Photography', 'Sports Events', 'Road Trips'
+];
 
 const questions: Question[] = [
   {
@@ -288,6 +297,129 @@ const NotificationItem: React.FC<{
   );
 };
 
+const InterestsManager: React.FC<{
+  interests: string[];
+  onInterestsChange: (interests: string[]) => void;
+}> = ({ interests, onInterestsChange }) => {
+  const [showAddInterests, setShowAddInterests] = useState(false);
+  const [selectedInterests, setSelectedInterests] = useState<string[]>(interests);
+
+  const toggleInterest = (interest: string) => {
+    const newInterests = selectedInterests.includes(interest)
+      ? selectedInterests.filter(i => i !== interest)
+      : [...selectedInterests, interest];
+    
+    setSelectedInterests(newInterests);
+  };
+
+  const saveInterests = () => {
+    onInterestsChange(selectedInterests);
+    setShowAddInterests(false);
+  };
+
+  const removeInterest = (interest: string) => {
+    const newInterests = selectedInterests.filter(i => i !== interest);
+    setSelectedInterests(newInterests);
+    onInterestsChange(newInterests);
+  };
+
+  return (
+    <div className="mt-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Heart className="h-4 w-4 text-purple-600" />
+          <span className="text-sm font-medium text-gray-700">Interests</span>
+        </div>
+        <button
+          onClick={() => setShowAddInterests(true)}
+          className="text-xs text-purple-600 hover:text-purple-700 flex items-center gap-1"
+        >
+          <Edit className="h-3 w-3" />
+          Edit
+        </button>
+      </div>
+
+      {selectedInterests.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {selectedInterests.map((interest) => (
+            <span
+              key={interest}
+              className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm"
+            >
+              <Tag className="h-3 w-3" />
+              {interest}
+              <button
+                onClick={() => removeInterest(interest)}
+                className="hover:text-purple-900 ml-1"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-gray-500">No interests added yet</p>
+      )}
+
+      {showAddInterests && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold">Select Your Interests</h3>
+              <button 
+                onClick={() => setShowAddInterests(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600">Choose interests that match your travel preferences:</p>
+              
+              <div className="grid grid-cols-1 gap-2">
+                {interestsOptions.map((interest) => (
+                  <button
+                    key={interest}
+                    onClick={() => toggleInterest(interest)}
+                    className={`flex items-center p-3 rounded-lg border transition-colors ${
+                      selectedInterests.includes(interest)
+                        ? 'border-purple-600 bg-purple-50 text-purple-700'
+                        : 'border-gray-200 hover:border-purple-200'
+                    }`}
+                  >
+                    <div className="flex-1 text-left">
+                      {interest}
+                    </div>
+                    {selectedInterests.includes(interest) && (
+                      <Check className="h-4 w-4 text-purple-600" />
+                    )}
+                  </button>
+                ))}
+              </div>
+              
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => setShowAddInterests(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveInterests}
+                  className="flex-1 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
+                >
+                  Save Interests
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const ProfileSection: React.FC = () => {
   const [profile, setProfile] = useState<Profile>({
     id: '',
@@ -295,6 +427,7 @@ const ProfileSection: React.FC = () => {
     email: '',
     avatar_url: '',
     location: '',
+    interests: [],
     preferences: {}
   });
 
@@ -336,6 +469,7 @@ const ProfileSection: React.FC = () => {
           email: userData.email,
           avatar_url: userData.avatar_url || '',
           location: userData.location || '',
+          interests: userData.interests || [],
           preferences: {},
         });
 
@@ -499,6 +633,25 @@ const ProfileSection: React.FC = () => {
     }
   };
 
+  const handleInterestsChange = async (interests: string[]) => {
+    try {
+      // Update local state first
+      setProfile(prev => ({
+        ...prev,
+        interests
+      }));
+
+      // Save to backend
+      await fetch('http://127.0.0.1:8000/api/user-interests', {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ interests }),
+      });
+    } catch (err) {
+      console.error('Error saving interests:', err);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -552,7 +705,7 @@ const ProfileSection: React.FC = () => {
               </span>
             )}
           </div>
-          <div>
+          <div className="flex-1">
             <h2 className="text-xl font-bold">{profile.full_name}</h2>
             <p className="text-gray-600">{profile.email}</p>
             {profile.location && (
@@ -561,10 +714,17 @@ const ProfileSection: React.FC = () => {
                 <span>{profile.location}</span>
               </div>
             )}
+            
+            {/* Interests Section */}
+            <InterestsManager 
+              interests={profile.interests || []}
+              onInterestsChange={handleInterestsChange}
+            />
           </div>
         </div>
       </div>
 
+      {/* Rest of the component remains the same */}
       {/* Travel Persona Section */}
       <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
         <div className="flex items-center justify-between mb-6">
