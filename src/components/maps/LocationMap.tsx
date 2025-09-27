@@ -2,7 +2,20 @@ import React, { useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, LayerGroup, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Icon } from 'leaflet';
-import { Hotel, Coffee, TreePine, Building2, Landmark, Utensils, Tent, Camera, Ticket, Plane, Bus } from 'lucide-react';
+
+// Icons
+import {
+  Hotel,        // used for "accommodation"
+  Coffee,       // used for "bar"
+  Landmark,     // used for "attraction"
+  Utensils,     // used for "restaurant"
+  Tent,         // could be used for "activity"
+  Camera,       // could be used for "activity"
+  Ticket,       // used for "event"
+  Bus,          // used for "shuttle"
+  Gavel,        // used for "legal advice"
+  BadgeCheck    // used for "NIE/TIE"
+} from 'lucide-react';
 
 // Fix for default marker icon
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -18,7 +31,19 @@ const defaultIcon = new Icon({
 interface PointOfInterest {
   id: string;
   name: string;
-  type: 'hotel' | 'restaurant' | 'park' | 'museum' | 'attraction' | 'activity' | 'flight' | 'shuttle';
+  // ✅ Kept types
+  type:
+    | 'event'
+    | 'restaurant'
+    | 'bar'
+    | 'attraction'
+    | 'activity'
+    | 'shuttle'
+    | 'accommodation'
+    | 'legal advice'
+    | 'NIE/TIE';
+  // ❌ Commented (removed) types:
+  // 'flight' | 'museum' | 'hotel'
   position: [number, number];
   description: string;
   rating?: number;
@@ -27,12 +52,14 @@ interface PointOfInterest {
   bookingUrl?: string;
   schedule?: string;
   amenities?: string[];
-  flightDetails?: {
-    departure: string;
-    arrival: string;
-    airline: string;
-    flightNumber: string;
-  };
+  // ❌ Commented (removed) flight-specific details
+  // flightDetails?: {
+  //   departure: string;
+  //   arrival: string;
+  //   airline: string;
+  //   flightNumber: string;
+  // };
+  // Kept shuttle details
   shuttleDetails?: {
     frequency: string;
     capacity: number;
@@ -64,47 +91,118 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
 
   const parsedCenter = parseCoordinates(center);
 
-  // Default points of interest if none provided
+  // Default points of interest (updated to new types)
   const defaultPOIs: PointOfInterest[] = [
     {
-      id: 'h1',
-      name: 'Grand Hotel',
-      type: 'hotel',
+      id: 'a1',
+      name: 'City Apartments',
+      type: 'accommodation',
       position: [parsedCenter.lat + 0.002, parsedCenter.lng + 0.002],
-      description: 'Luxury 5-star hotel with spa',
-      rating: 4.8,
-      price: '€€€',
-      image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80',
+      description: 'Comfortable serviced apartments near the center.',
+      rating: 4.6,
+      price: '€€',
+      image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80',
       bookingUrl: '#',
-      amenities: ['Spa', 'Pool', 'Restaurant', 'Gym']
+      amenities: ['Kitchen', 'WiFi', 'Washer/Dryer']
     },
     {
       id: 'r1',
       name: 'Local Bistro',
       type: 'restaurant',
       position: [parsedCenter.lat - 0.001, parsedCenter.lng + 0.001],
-      description: 'Traditional local cuisine',
+      description: 'Traditional local cuisine.',
       rating: 4.5,
       price: '€€',
       image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80',
       bookingUrl: '#'
+    },
+    {
+      id: 'b1',
+      name: 'Corner Bar',
+      type: 'bar',
+      position: [parsedCenter.lat + 0.0015, parsedCenter.lng - 0.001],
+      description: 'Cozy bar with signature coffees and mocktails.',
+      rating: 4.3,
+      price: '€',
+      image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80'
+    },
+    {
+      id: 'ev1',
+      name: 'City Festival Stage',
+      type: 'event',
+      position: [parsedCenter.lat - 0.0015, parsedCenter.lng - 0.0015],
+      description: 'Open-air stage for live performances.',
+      rating: 4.7,
+      price: 'Free'
+    },
+    {
+      id: 'att1',
+      name: 'Old Town Gate',
+      type: 'attraction',
+      position: [parsedCenter.lat + 0.0025, parsedCenter.lng - 0.0005],
+      description: 'Historic city gate and photo spot.',
+      rating: 4.4
+    },
+    {
+      id: 'act1',
+      name: 'Riverside Kayaking',
+      type: 'activity',
+      position: [parsedCenter.lat - 0.002, parsedCenter.lng + 0.0025],
+      description: 'Guided kayaking along the river.',
+      rating: 4.6,
+      price: '€€'
+    },
+    {
+      id: 'sh1',
+      name: 'Airport Shuttle Stop',
+      type: 'shuttle',
+      position: [parsedCenter.lat + 0.0005, parsedCenter.lng + 0.0005],
+      description: 'Express shuttle to/from the airport.',
+      price: '€€',
+      shuttleDetails: {
+        frequency: 'Every 30 min',
+        capacity: 40,
+        duration: '35 min'
+      }
+    },
+    {
+      id: 'law1',
+      name: 'Legal Aid Center',
+      type: 'legal advice',
+      position: [parsedCenter.lat + 0.001, parsedCenter.lng + 0.003],
+      description: 'Consultations on visas and residence permits.',
+      rating: 4.8
+    },
+    {
+      id: 'nie1',
+      name: 'NIE/TIE Support Desk',
+      type: 'NIE/TIE',
+      position: [parsedCenter.lat - 0.0025, parsedCenter.lng - 0.0008],
+      description: 'Documentation support for NIE/TIE (Spain).',
+      rating: 4.7
     }
+    // ❌ Commented (removed) examples for flights/museum/hotels
+    // { id: 'f1', name: 'Flight XYZ', type: 'flight', ... }
+    // { id: 'm1', name: 'City Museum', type: 'museum', ... }
+    // { id: 'h1', name: 'Grand Hotel', type: 'hotel', ... }
   ];
 
   const pointsOfInterest = propPOIs || defaultPOIs;
 
   const getMarkerIcon = (type: string) => {
-    const iconUrl = `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${
-      type === 'hotel' ? 'red' :
-      type === 'restaurant' ? 'orange' :
-      type === 'park' ? 'green' :
-      type === 'museum' ? 'violet' :
-      type === 'attraction' ? 'yellow' :
-      type === 'activity' ? 'blue' :
-      type === 'flight' ? 'black' :
-      type === 'shuttle' ? 'grey' :
-      'grey'
-    }.png`;
+    // Assign distinct marker colors to allowed types
+    const color =
+      type === 'accommodation' ? 'red' :
+      type === 'restaurant'    ? 'orange' :
+      type === 'bar'           ? 'green' :
+      type === 'attraction'    ? 'yellow' :
+      type === 'activity'      ? 'blue' :
+      type === 'event'         ? 'violet' :
+      type === 'shuttle'       ? 'grey' :
+      type === 'legal advice'  ? 'black' :
+      type === 'NIE/TIE'       ? 'gold' : 'grey';
+
+    const iconUrl = `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`;
 
     return new Icon({
       iconUrl,
@@ -116,44 +214,52 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'hotel':
+      case 'accommodation':
         return <Hotel className="h-4 w-4" />;
       case 'restaurant':
         return <Utensils className="h-4 w-4" />;
-      case 'park':
-        return <TreePine className="h-4 w-4" />;
-      case 'museum':
-        return <Building2 className="h-4 w-4" />;
+      case 'bar':
+        return <Coffee className="h-4 w-4" />;
       case 'attraction':
         return <Landmark className="h-4 w-4" />;
       case 'activity':
+        // Pick either Tent or Camera (or both based on context)
+        return <Tent className="h-4 w-4" />;
+      case 'event':
         return <Ticket className="h-4 w-4" />;
-      case 'flight':
-        return <Plane className="h-4 w-4" />;
       case 'shuttle':
         return <Bus className="h-4 w-4" />;
+      case 'legal advice':
+        return <Gavel className="h-4 w-4" />;
+      case 'NIE/TIE':
+        return <BadgeCheck className="h-4 w-4" />;
       default:
         return null;
     }
   };
 
-  const filteredPOIs = selectedType 
+  const filteredPOIs = selectedType
     ? pointsOfInterest.filter(poi => poi.type === selectedType)
     : pointsOfInterest;
 
   const categories = [
-    { type: 'hotel', label: 'Hotels' },
-    { type: 'restaurant', label: 'Restaurants' },
-    { type: 'park', label: 'Parks' },
-    { type: 'museum', label: 'Museums' },
-    { type: 'attraction', label: 'Attractions' },
-    { type: 'activity', label: 'Activities' },
-    { type: 'flight', label: 'Flights' },
-    { type: 'shuttle', label: 'Airport Shuttle' }
+    { type: 'accommodation', label: 'Accommodation' },
+    { type: 'restaurant',    label: 'Restaurants' },
+    { type: 'bar',           label: 'Bars' },
+    { type: 'attraction',    label: 'Attractions' },
+    { type: 'activity',      label: 'Activities' },
+    { type: 'event',         label: 'Events' },
+    { type: 'shuttle',       label: 'Airport Shuttle' },
+    { type: 'legal advice',  label: 'Legal Advice' },
+    { type: 'NIE/TIE',       label: 'NIE/TIE' }
+    // ❌ Commented (removed) categories:
+    // { type: 'flight', label: 'Flights' },
+    // { type: 'museum', label: 'Museums' },
+    // { type: 'hotel',  label: 'Hotels' }
   ];
 
   // Ensure we have valid coordinates
-  if (!parsedCenter.lat || !parsedCenter.lng) {
+  if (!parsedCenter?.lat || !parsedCenter?.lng) {
     return (
       <div className="bg-red-50 text-red-600 p-4 rounded-lg">
         Invalid coordinates provided
@@ -191,7 +297,7 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             />
-            
+
             {/* Main location marker with radius */}
             <LayerGroup>
               <Circle
@@ -255,14 +361,9 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
                   <h3 className="font-semibold text-lg">{selectedPOI.name}</h3>
                 </div>
                 <p className="text-gray-600 text-sm mb-3">{selectedPOI.description}</p>
-                
-                {selectedPOI.type === 'flight' && selectedPOI.flightDetails && (
-                  <div className="space-y-2 text-sm">
-                    <p><strong>Departures:</strong> {selectedPOI.flightDetails.departure}</p>
-                    <p><strong>Arrivals:</strong> {selectedPOI.flightDetails.arrival}</p>
-                    <p><strong>Airlines:</strong> {selectedPOI.flightDetails.airline}</p>
-                  </div>
-                )}
+
+                {/* ❌ Commented (removed) flight details block */}
+                {/* {selectedPOI.type === 'flight' && selectedPOI.flightDetails && ( ... )} */}
 
                 {selectedPOI.type === 'shuttle' && selectedPOI.shuttleDetails && (
                   <div className="space-y-2 text-sm">
