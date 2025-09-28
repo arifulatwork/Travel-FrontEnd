@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Search, 
-  BookOpen, 
-  Clock, 
-  Star, 
-  MapPin, 
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  Search,
+  BookOpen,
+  Clock,
+  Star,
+  MapPin,
   Calendar,
   X,
   Check,
@@ -12,13 +12,12 @@ import {
   Briefcase,
   Building,
   Award,
-  CreditCard
+  CreditCard,
 } from 'lucide-react';
 
-// ====== API base ======
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://127.0.0.1:8000/api';
 
-// ====== Types ======
+/** ===================== Types ===================== */
 interface Internship {
   id: number;
   title: string;
@@ -41,14 +40,14 @@ interface Internship {
 }
 
 interface Category {
-  id: string; // slug coming from API
+  id: string; // slug
   name: string;
   icon: React.ComponentType<any>;
   count: number;
 }
 
 interface ApiCategory {
-  id: string;        // slug
+  id: string; // slug
   name: string;
   icon?: string | null;
   count: number;
@@ -77,7 +76,15 @@ interface FilterOptions {
   skills: string[];
 }
 
-// ====== Helpers ======
+interface AuthUser {
+  id: number | string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  location?: string;
+}
+
+/** ===================== Helpers ===================== */
 const ICONS: Record<string, React.ComponentType<any>> = {
   briefcase: Briefcase,
   users: Users,
@@ -111,19 +118,45 @@ function paramsToQuery(params: Record<string, any>) {
   return usp.toString();
 }
 
-// ====== Component ======
+const formatPrice = (n: number) =>
+  `€${Number(n).toFixed(2).replace(/\.00$/, '')}`;
+
+/** Auth header helper (same pattern as your ProfileSection) */
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  return {
+    Authorization: token ? `Bearer ${token}` : '',
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+};
+
+const fetchJSON = async (url: string, options: RequestInit = {}) => {
+  const res = await fetch(url, options);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`${res.status} ${res.statusText} — ${text}`);
+  }
+  return res.json();
+};
+
+/** ===================== Component ===================== */
 const InternshipMarketplace: React.FC = () => {
   const [internships, setInternships] = useState<Internship[]>([]);
-  const [filteredInternships, setFilteredInternships] = useState<Internship[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedInternship, setSelectedInternship] = useState<Internship | null>(null);
+
+  // auth’d user (like DestinationCard / ProfileSection)
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const isAuthed = useMemo(() => !!localStorage.getItem('token'), []);
 
   // Server-powered options
   const [categories, setCategories] = useState<Category[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
   const [modes, setModes] = useState<string[]>([]); // UI strings
   const [skills, setSkills] = useState<string[]>([]);
+  const [dbPriceRange, setDbPriceRange] = useState<[number, number]>([0, 5000]);
+
+  const [searchQuery, setSearchQuery] = useState('');
   const [sort, setSort] = useState<'popularity' | 'price_asc' | 'price_desc' | 'rating' | 'newest'>('popularity');
 
   const [filters, setFilters] = useState<FilterOptions>({
@@ -134,21 +167,40 @@ const InternshipMarketplace: React.FC = () => {
     skills: [],
   });
 
-  // ---- Fetch options on mount ----
+  const [selectedInternship, setSelectedInternship] = useState<Internship | null>(null);
+  const [enrollBusy, setEnrollBusy] = useState(false);
+  const [enrollError, setEnrollError] = useState<string>('');
+
+  /** ---------- Load authenticated user (if token exists) ---------- */
+  useEffect(() => {
+    const loadUser = async () => {
+      if (!isAuthed) {
+        setUser(null);
+        return;
+      }
+      try {
+        const u = await fetchJSON(`${API_BASE}/auth/user`, { headers: getAuthHeaders() });
+        setUser(u);
+      } catch (err) {
+        console.warn('Failed to load auth user:', err);
+        setUser(null);
+      }
+    };
+    loadUser();
+  }, [isAuthed]);
+
+  /** ---------- Load options on mount ---------- */
   useEffect(() => {
     (async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${API_BASE}/internships/options`);
-        if (!res.ok) throw new Error('Failed to load options');
-        const data: OptionsResponse = await res.json();
-
+        const data: OptionsResponse = await fetchJSON(`${API_BASE}/internships/options`);
         setCategories(data.categories.map(mapApiCategoryToUI));
         setLocations(data.locations);
-        setModes(data.modes); // UI strings
+        setModes(data.modes);
         setSkills(data.skills);
-        // init price range from DB
-        setFilters(f => ({ ...f, priceRange: data.priceRange }));
+        setDbPriceRange(data.priceRange);
+        setFilters((f) => ({ ...f, priceRange: data.priceRange }));
       } catch (err) {
         console.error(err);
       } finally {
@@ -157,7 +209,7 @@ const InternshipMarketplace: React.FC = () => {
     })();
   }, []);
 
-  // ---- Fetch internships whenever filters/search/sort change ----
+  /** ---------- Load internships whenever filters/search/sort change ---------- */
   useEffect(() => {
     (async () => {
       try {
@@ -173,16 +225,11 @@ const InternshipMarketplace: React.FC = () => {
           sort,
           per_page: 60,
         });
-        const res = await fetch(`${API_BASE}/internships?${query}`);
-        if (!res.ok) throw new Error('Failed to load internships');
-        const data: ListResponse = await res.json();
-
+        const data: ListResponse = await fetchJSON(`${API_BASE}/internships?${query}`);
         setInternships(data.data);
-        setFilteredInternships(data.data); // already filtered server-side
       } catch (err) {
         console.error(err);
         setInternships([]);
-        setFilteredInternships([]);
       } finally {
         setLoading(false);
       }
@@ -208,7 +255,7 @@ const InternshipMarketplace: React.FC = () => {
   const clearFilters = () => {
     setFilters({
       categories: [],
-      priceRange: [...filters.priceRange] as [number, number], // keep current DB range
+      priceRange: [...dbPriceRange] as [number, number],
       locations: [],
       modes: [],
       skills: [],
@@ -217,9 +264,53 @@ const InternshipMarketplace: React.FC = () => {
     setSort('popularity');
   };
 
-  const handleEnroll = (internship: Internship) => {
+  const handleEnrollClick = (internship: Internship) => {
+    if (!isAuthed) {
+      alert('Please log in to enroll in an internship.');
+      return;
+    }
     setSelectedInternship(internship);
-    // TODO: open Stripe Checkout or your payment flow
+    setEnrollError('');
+  };
+
+  /** Try to start payment. The backend may return:
+   *  - { checkout_url: string }  -> redirect (Stripe Checkout or custom)
+   *  - { client_secret: string, payment_intent_id: string } -> handle with Stripe.js (not shown)
+   */
+  const startPayment = async () => {
+    if (!selectedInternship) return;
+    setEnrollBusy(true);
+    setEnrollError('');
+    try {
+      const resp = await fetchJSON(`${API_BASE}/auth/internships/enroll/create-payment-intent`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ internship_id: selectedInternship.id }),
+      });
+
+      if (resp?.checkout_url) {
+        window.location.href = resp.checkout_url; // e.g., Stripe Checkout Session URL
+        return;
+      }
+
+      if (resp?.client_secret) {
+        // If you plan to use Stripe.js, do it here:
+        // const stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY!);
+        // await stripe?.confirmCardPayment(resp.client_secret);
+        alert('Payment initiated. (client_secret received)\nIntegrate Stripe.js confirm flow here.');
+        setSelectedInternship(null);
+        return;
+      }
+
+      // Fallback: unknown response
+      alert('Payment created, but no redirect/client_secret returned. Check backend response.');
+      setSelectedInternship(null);
+    } catch (err: any) {
+      console.error('Payment start error:', err);
+      setEnrollError(err?.message ?? 'Failed to start payment.');
+    } finally {
+      setEnrollBusy(false);
+    }
   };
 
   const renderStars = (rating: number) => (
@@ -251,16 +342,42 @@ const InternshipMarketplace: React.FC = () => {
     );
   }
 
+  const filteredInternships = internships; // server-side filtered already
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-3xl font-bold text-gray-900">Global Internship Marketplace</h1>
-            <p className="mt-2 text-lg text-gray-600">
-              Discover internship opportunities from around the world
-            </p>
+          <div className="flex items-center justify-between">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-3xl font-bold text-gray-900">Global Internship Marketplace</h1>
+              <p className="mt-2 text-lg text-gray-600">
+                Discover internship opportunities from around the world
+              </p>
+            </div>
+            {user ? (
+              <div className="hidden sm:flex items-center gap-3">
+                <div className="text-right">
+                  <p className="text-sm text-gray-600">Signed in as</p>
+                  <p className="font-medium text-gray-900">{user.first_name} {user.last_name}</p>
+                </div>
+                <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
+                  <span className="text-purple-600 font-semibold">
+                    {(user.first_name?.[0] || 'U').toUpperCase()}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="hidden sm:block">
+                <a
+                  href="/login"
+                  className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+                >
+                  Log in
+                </a>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -393,22 +510,22 @@ const InternshipMarketplace: React.FC = () => {
                   <h3 className="text-sm font-medium text-gray-700 mb-2">Price Range</h3>
                   <div className="px-2">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-gray-500">${filters.priceRange[0]}</span>
-                      <span className="text-xs text-gray-500">${filters.priceRange[1]}</span>
+                      <span className="text-xs text-gray-500">{formatPrice(filters.priceRange[0])}</span>
+                      <span className="text-xs text-gray-500">{formatPrice(filters.priceRange[1])}</span>
                     </div>
                     <input
                       type="range"
-                      min={filters.priceRange[0]}
-                      max={filters.priceRange[1] < filters.priceRange[0] ? filters.priceRange[0] : filters.priceRange[1]}
+                      min={dbPriceRange[0]}
+                      max={dbPriceRange[1]}
                       step="10"
                       value={filters.priceRange[1]}
                       onChange={(e) =>
-                        handleFilterChange('priceRange', [filters.priceRange[0], parseInt(e.target.value)])
+                        handleFilterChange('priceRange', [filters.priceRange[0], parseInt(e.target.value, 10)])
                       }
                       className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                     />
                     <div className="text-xs text-gray-600 mt-2 text-center">
-                      Up to ${filters.priceRange[1]}
+                      Up to {formatPrice(filters.priceRange[1])}
                     </div>
                   </div>
                 </div>
@@ -462,8 +579,8 @@ const InternshipMarketplace: React.FC = () => {
                       </div>
                     )}
                     <div className="relative">
-                      <img 
-                        src={internship.image} 
+                      <img
+                        src={internship.image}
                         alt={internship.title}
                         className="w-full h-48 object-cover"
                       />
@@ -480,7 +597,7 @@ const InternshipMarketplace: React.FC = () => {
                           <p className="text-sm text-gray-600">{internship.company}</p>
                         </div>
                         {internship.originalPrice && (
-                          <span className="text-xs text-gray-500 line-through">${internship.originalPrice}</span>
+                          <span className="text-xs text-gray-500 line-through">{formatPrice(internship.originalPrice)}</span>
                         )}
                       </div>
 
@@ -516,10 +633,10 @@ const InternshipMarketplace: React.FC = () => {
 
                       <div className="flex items-center justify-between">
                         <div className="text-2xl font-bold text-gray-900">
-                          €{internship.price}
+                          {formatPrice(internship.price)}
                         </div>
                         <button
-                          onClick={() => handleEnroll(internship)}
+                          onClick={() => handleEnrollClick(internship)}
                           className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
                         >
                           Enroll Now
@@ -547,7 +664,7 @@ const InternshipMarketplace: React.FC = () => {
               <div className="p-6">
                 <div className="flex justify-between items-start mb-4">
                   <h2 className="text-2xl font-bold text-gray-900">Enroll in {selectedInternship.title}</h2>
-                  <button 
+                  <button
                     onClick={() => setSelectedInternship(null)}
                     className="text-gray-400 hover:text-gray-600"
                   >
@@ -557,8 +674,8 @@ const InternshipMarketplace: React.FC = () => {
 
                 <div className="flex flex-col md:flex-row gap-6 mb-6">
                   <div className="md:w-1/3">
-                    <img 
-                      src={selectedInternship.image} 
+                    <img
+                      src={selectedInternship.image}
                       alt={selectedInternship.title}
                       className="w-full rounded-lg"
                     />
@@ -601,27 +718,42 @@ const InternshipMarketplace: React.FC = () => {
                   <div className="bg-gray-50 p-4 rounded-lg mb-4">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-gray-600">Program fee</span>
-                      <span className="font-semibold">${selectedInternship.price}</span>
+                      <span className="font-semibold">{formatPrice(selectedInternship.price)}</span>
                     </div>
                     {selectedInternship.originalPrice && (
                       <div className="flex justify-between items-center text-sm text-gray-500">
                         <span>Original price</span>
-                        <span className="line-through">${selectedInternship.originalPrice}</span>
+                        <span className="line-through">{formatPrice(selectedInternship.originalPrice)}</span>
                       </div>
                     )}
                     <div className="border-t border-gray-200 mt-3 pt-3 flex justify-between items-center font-bold">
                       <span>Total</span>
-                      <span>${selectedInternship.price}</span>
+                      <span>{formatPrice(selectedInternship.price)}</span>
                     </div>
                   </div>
 
+                  {enrollError && (
+                    <div className="mb-3 p-3 rounded-lg bg-red-50 text-red-700 text-sm">
+                      {enrollError}
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-2 gap-4">
-                    <button className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
-                      Save for later
+                    <button
+                      className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                      onClick={() => setSelectedInternship(null)}
+                    >
+                      Cancel
                     </button>
-                    <button className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 flex items-center justify-center">
+                    <button
+                      disabled={enrollBusy}
+                      onClick={startPayment}
+                      className={`px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 flex items-center justify-center ${
+                        enrollBusy ? 'opacity-70 cursor-not-allowed' : ''
+                      }`}
+                    >
                       <CreditCard className="h-5 w-5 mr-2" />
-                      Proceed to Payment
+                      {enrollBusy ? 'Processing…' : 'Proceed to Payment'}
                     </button>
                   </div>
                 </div>
