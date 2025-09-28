@@ -516,7 +516,7 @@ const InternshipMarketplace: React.FC = () => {
 
                       <div className="flex items-center justify-between">
                         <div className="text-2xl font-bold text-gray-900">
-                          ${internship.price}
+                          €{internship.price}
                         </div>
                         <button
                           onClick={() => handleEnroll(internship)}
