@@ -131,13 +131,35 @@ const getAuthHeaders = () => {
   };
 };
 
+// Updated fetchJSON to return status and handle 409
 const fetchJSON = async (url: string, options: RequestInit = {}) => {
   const res = await fetch(url, options);
+  const text = await res.text();
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`${res.status} ${res.statusText} — ${text}`);
+    // Surface status + message upstream
+    let msg = text;
+    try { msg = JSON.parse(text)?.message ?? text; } catch {}
+    const error: any = new Error(`${res.status} ${res.statusText} — ${msg}`);
+    error.status = res.status;
+    throw error;
   }
-  return res.json();
+  return JSON.parse(text);
+};
+
+// Optional: PaymentIntent confirmation for manual Stripe.js flow
+const confirmPaymentIntent = async (payment_intent_id: string) => {
+  try {
+    const res = await fetchJSON(`${API_BASE}/auth/internships/enroll/confirm`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ payment_intent_id }),
+    });
+    // handle res.status === 'ok' | 'processing' | 'failed'
+    return res;
+  } catch (e) {
+    console.error(e);
+    throw e;
+  }
 };
 
 /** ===================== Component ===================== */
@@ -145,7 +167,7 @@ const InternshipMarketplace: React.FC = () => {
   const [internships, setInternships] = useState<Internship[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // auth’d user (like DestinationCard / ProfileSection)
+  // auth'd user (like DestinationCard / ProfileSection)
   const [user, setUser] = useState<AuthUser | null>(null);
   const isAuthed = useMemo(() => !!localStorage.getItem('token'), []);
 
@@ -273,10 +295,7 @@ const InternshipMarketplace: React.FC = () => {
     setEnrollError('');
   };
 
-  /** Try to start payment. The backend may return:
-   *  - { checkout_url: string }  -> redirect (Stripe Checkout or custom)
-   *  - { client_secret: string, payment_intent_id: string } -> handle with Stripe.js (not shown)
-   */
+  /** Updated startPayment with 409 handling */
   const startPayment = async () => {
     if (!selectedInternship) return;
     setEnrollBusy(true);
@@ -289,25 +308,26 @@ const InternshipMarketplace: React.FC = () => {
       });
 
       if (resp?.checkout_url) {
-        window.location.href = resp.checkout_url; // e.g., Stripe Checkout Session URL
+        window.location.href = resp.checkout_url; // Stripe Checkout
         return;
       }
 
       if (resp?.client_secret) {
-        // If you plan to use Stripe.js, do it here:
-        // const stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY!);
-        // await stripe?.confirmCardPayment(resp.client_secret);
-        alert('Payment initiated. (client_secret received)\nIntegrate Stripe.js confirm flow here.');
+        // PaymentIntent (manual confirm with Stripe.js)
+        alert('Payment initiated (client_secret received). Plug in Stripe.js confirm here.');
         setSelectedInternship(null);
         return;
       }
 
-      // Fallback: unknown response
       alert('Payment created, but no redirect/client_secret returned. Check backend response.');
       setSelectedInternship(null);
     } catch (err: any) {
       console.error('Payment start error:', err);
-      setEnrollError(err?.message ?? 'Failed to start payment.');
+      if (err?.status === 409) {
+        setEnrollError('You are already enrolled in this internship. 🎉');
+      } else {
+        setEnrollError(err?.message ?? 'Failed to start payment.');
+      }
     } finally {
       setEnrollBusy(false);
     }
