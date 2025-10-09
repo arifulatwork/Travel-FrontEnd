@@ -24,8 +24,8 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, darkMo
     { id: 'weather', icon: Cloud, label: translations.weather },
     { id: 'messages', icon: MessageCircle, label: translations.messages },
     { id: 'networking', icon: Users, label: translations.networking },
-    { id: 'premium', icon: Crown, label: translations.premium },
-    { id: 'settings', icon: Settings, label: translations.settings }
+    { id: 'premium', icon: Crown, label: translations.premium }
+    // { id: 'settings', icon: Settings, label: translations.settings }
   ];
 
   return (
