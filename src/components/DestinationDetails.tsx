@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Users, CreditCard, Info, Sun, Moon, Coffee, Music, Utensils, Palette, Search, X, Check, Star } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, CreditCard, Info, Sun, Moon, Coffee, Music, Utensils, Palette, Search, X, Check, Star, Upload, FileText } from 'lucide-react';
 import LocationMap from './maps/LocationMap';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
@@ -80,6 +80,23 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
   const [bookedAttractionIds, setBookedAttractionIds] = useState<number[]>([]);
   const [bookingDetails, setBookingDetails] = useState<AttractionBooking | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
+  
+  // Student Intake Form State
+  const [studentForm, setStudentForm] = useState({
+    fullName: '',
+    email: '',
+    contactPhone: '',
+    nationality: '',
+    targetCountry: '',
+    currentSituation: '',
+    visaExpiryDate: '',
+    hasResidenceCard: '',
+    servicesNeeded: [] as string[],
+    professionalInfo: '',
+    futurePlans: '',
+    documents: [] as File[]
+  });
+  const [showStudentForm, setShowStudentForm] = useState(false);
 
   useEffect(() => {
     const fetchUserAndBookings = async () => {
@@ -221,6 +238,90 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
     }
   };
 
+  // Student Intake Form Handlers
+  const handleStudentFormChange = (field: string, value: any) => {
+    setStudentForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleServicesChange = (service: string) => {
+    setStudentForm(prev => ({
+      ...prev,
+      servicesNeeded: prev.servicesNeeded.includes(service)
+        ? prev.servicesNeeded.filter(s => s !== service)
+        : [...prev.servicesNeeded, service]
+    }));
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    setStudentForm(prev => ({
+      ...prev,
+      documents: [...prev.documents, ...files]
+    }));
+  };
+
+  const removeDocument = (index: number) => {
+    setStudentForm(prev => ({
+      ...prev,
+      documents: prev.documents.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleStudentFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      
+      Object.entries(studentForm).forEach(([key, value]) => {
+        if (key === 'documents') {
+          studentForm.documents.forEach(file => {
+            formData.append('documents[]', file);
+          });
+        } else if (key === 'servicesNeeded') {
+          formData.append('services_needed', JSON.stringify(value));
+        } else {
+          formData.append(key, value as string);
+        }
+      });
+
+      const response = await fetch('http://127.0.0.1:8000/api/auth/student-intake', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (response.ok) {
+        alert('Student intake form submitted successfully!');
+        setStudentForm({
+          fullName: '',
+          email: '',
+          contactPhone: '',
+          nationality: '',
+          targetCountry: '',
+          currentSituation: '',
+          visaExpiryDate: '',
+          hasResidenceCard: '',
+          servicesNeeded: [],
+          professionalInfo: '',
+          futurePlans: '',
+          documents: []
+        });
+        setShowStudentForm(false);
+      } else {
+        alert('Error submitting form. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error submitting student intake form:', error);
+      alert('Error submitting form. Please try again.');
+    }
+  };
+
   const filteredAttractions = attractions.filter(attraction => 
     (visitType === 'group' && attraction.groupPrice ? attraction.groupPrice : attraction.price) <= maxPrice
   );
@@ -285,6 +386,271 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
           zoom={13} 
           pointsOfInterest={pointsOfInterest}
         />
+      </div>
+
+      {/* Student Intake Form */}
+      <div className="bg-white rounded-xl p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <FileText className="h-6 w-6 text-blue-600" />
+            <h2 className="text-xl font-semibold">Student Intake — Quiz / Questionnaire</h2>
+          </div>
+          <button
+            onClick={() => setShowStudentForm(!showStudentForm)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            {showStudentForm ? 'Collapse Form' : 'Show Form'}
+          </button>
+        </div>
+
+        {showStudentForm && (
+          <form onSubmit={handleStudentFormSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Full name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={studentForm.fullName}
+                  onChange={(e) => handleStudentFormChange('fullName', e.target.value)}
+                  placeholder="e.g. María García"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email *
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={studentForm.email}
+                  onChange={(e) => handleStudentFormChange('email', e.target.value)}
+                  placeholder="name@example.com"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Contact phone
+                </label>
+                <input
+                  type="tel"
+                  value={studentForm.contactPhone}
+                  onChange={(e) => handleStudentFormChange('contactPhone', e.target.value)}
+                  placeholder="+34 600 000 000"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nationality *
+                </label>
+                <select
+                  required
+                  value={studentForm.nationality}
+                  onChange={(e) => handleStudentFormChange('nationality', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Select nationality</option>
+                  <option value="Spanish">Spanish</option>
+                  <option value="French">French</option>
+                  <option value="German">German</option>
+                  <option value="Italian">Italian</option>
+                  <option value="British">British</option>
+                  <option value="American">American</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Country where you want services
+                </label>
+                <select
+                  value={studentForm.targetCountry}
+                  onChange={(e) => handleStudentFormChange('targetCountry', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Select a country</option>
+                  <option value="Spain">Spain</option>
+                  <option value="France">France</option>
+                  <option value="Germany">Germany</option>
+                  <option value="Italy">Italy</option>
+                  <option value="UK">United Kingdom</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Current situation
+                </label>
+                <select
+                  value={studentForm.currentSituation}
+                  onChange={(e) => handleStudentFormChange('currentSituation', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Choose</option>
+                  <option value="Prospective student">Prospective student</option>
+                  <option value="Current student">Current student</option>
+                  <option value="Graduate">Graduate</option>
+                  <option value="Working professional">Working professional</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Visa / Permit expiry date (if applicable)
+                </label>
+                <input
+                  type="date"
+                  value={studentForm.visaExpiryDate}
+                  onChange={(e) => handleStudentFormChange('visaExpiryDate', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Do you have TIE/NIE/Residence card?
+                </label>
+                <select
+                  value={studentForm.hasResidenceCard}
+                  onChange={(e) => handleStudentFormChange('hasResidenceCard', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Select</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                  <option value="In process">In process</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Which services do you need? (choose all that apply)
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {[
+                  'Legal advice',
+                  'Accommodation search',
+                  'Documentation support',
+                  'Student visa assistance',
+                  'Job / internship support',
+                  'Other'
+                ].map(service => (
+                  <label key={service} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={studentForm.servicesNeeded.includes(service)}
+                      onChange={() => handleServicesChange(service)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">{service}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Professional / academic information
+              </label>
+              <textarea
+                value={studentForm.professionalInfo}
+                onChange={(e) => handleStudentFormChange('professionalInfo', e.target.value)}
+                placeholder="Briefly list degree, field of study, institution, and current employment or internship"
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Future plans — what would you like to do next?
+              </label>
+              <select
+                value={studentForm.futurePlans}
+                onChange={(e) => handleStudentFormChange('futurePlans', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Select an option</option>
+                <option value="Continue studies">Continue studies</option>
+                <option value="Find job">Find job</option>
+                <option value="Start internship">Start internship</option>
+                <option value="Start business">Start business</option>
+                <option value="Return home country">Return home country</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Upload supporting documents (ID, visa, enrolment) — PDF/JPG/PNG, max 5MB each
+              </label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  id="document-upload"
+                />
+                <label
+                  htmlFor="document-upload"
+                  className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  <Upload className="h-4 w-4" />
+                  Choose Files
+                </label>
+                <p className="text-sm text-gray-500 mt-2">
+                  {studentForm.documents.length > 0 
+                    ? `${studentForm.documents.length} file(s) selected`
+                    : 'No files selected'
+                  }
+                </p>
+              </div>
+              
+              {studentForm.documents.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {studentForm.documents.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm text-gray-700">{file.name}</span>
+                        <span className="text-xs text-gray-500">
+                          ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeDocument(index)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+              >
+                Submit Application
+              </button>
+            </div>
+          </form>
+        )}
       </div>
 
       {filteredAttractions.length > 0 ? (
@@ -365,7 +731,7 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
                       ? `€${(attraction.groupPrice * groupSize).toFixed(2)} `
                       : `€${attraction.price.toFixed(2)}`}
                     {visitType === 'group' && attraction.groupPrice && groupSize >= minGroupSize && (
-                      <span className="text-sm text-gray-500"> (€{attraction.groupPrice} per person)</span>
+                      <span className="text-sm text-gray-500"> (€${attraction.groupPrice} per person)</span>
                     )}
                   </span>
                   {bookedAttractionIds.includes(attraction.id) ? (
