@@ -109,9 +109,9 @@ const StudentIntakeForm: React.FC<Props> = ({ onPaymentReady }) => {
         </div>
         <button
           onClick={() => setShowForm((s) => !s)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 "
         >
-          {showForm ? 'Collapse Form' : 'Show Form'}
+          {showForm ? 'Close Form' : 'Show Form'}
         </button>
       </div>
 
@@ -289,7 +289,7 @@ const StudentIntakeForm: React.FC<Props> = ({ onPaymentReady }) => {
               />
               <label
                 htmlFor="document-upload-intake"
-                className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 "
               >
                 <Upload className="h-4 w-4" />
                 Choose Files
