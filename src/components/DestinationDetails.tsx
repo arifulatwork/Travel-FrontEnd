@@ -4,6 +4,7 @@ import LocationMap from './maps/LocationMap';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import AttractionPaymentModal from './AttractionPaymentModal';
+import StudentIntakePaymentModal from './StudentIntake/StudentIntakePaymentModal';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_yourKeyHere');
 
@@ -97,6 +98,11 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
     documents: [] as File[]
   });
   const [showStudentForm, setShowStudentForm] = useState(false);
+
+  // Student Intake payment state
+  const [intakeClientSecret, setIntakeClientSecret] = useState<string | null>(null);
+  const [intakeSubmissionId, setIntakeSubmissionId] = useState<number | null>(null);
+  const [showIntakePayment, setShowIntakePayment] = useState(false);
 
   useEffect(() => {
     const fetchUserAndBookings = async () => {
@@ -275,50 +281,44 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
     try {
       const token = localStorage.getItem('token');
       const formData = new FormData();
-      
-      Object.entries(studentForm).forEach(([key, value]) => {
-        if (key === 'documents') {
-          studentForm.documents.forEach(file => {
-            formData.append('documents[]', file);
-          });
-        } else if (key === 'servicesNeeded') {
-          formData.append('services_needed', JSON.stringify(value));
-        } else {
-          formData.append(key, value as string);
-        }
+
+      // Build FormData exactly as the backend expects
+      formData.append('fullName', studentForm.fullName);
+      formData.append('email', studentForm.email);
+      formData.append('contactPhone', studentForm.contactPhone);
+      formData.append('nationality', studentForm.nationality);
+      formData.append('targetCountry', studentForm.targetCountry);
+      formData.append('currentSituation', studentForm.currentSituation);
+      formData.append('visaExpiryDate', studentForm.visaExpiryDate);
+      formData.append('hasResidenceCard', studentForm.hasResidenceCard);
+      formData.append('services_needed', JSON.stringify(studentForm.servicesNeeded));
+      formData.append('professionalInfo', studentForm.professionalInfo);
+      formData.append('futurePlans', studentForm.futurePlans);
+
+      studentForm.documents.forEach((file) => {
+        formData.append('documents[]', file);
       });
 
-      const response = await fetch('http://127.0.0.1:8000/api/auth/student-intake', {
+      // 🔁 NEW: INITIATE (creates PaymentIntent + saves "pending_payment" submission)
+      const res = await fetch('http://127.0.0.1:8000/api/auth/student-intake/initiate', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
 
-      if (response.ok) {
-        alert('Student intake form submitted successfully!');
-        setStudentForm({
-          fullName: '',
-          email: '',
-          contactPhone: '',
-          nationality: '',
-          targetCountry: '',
-          currentSituation: '',
-          visaExpiryDate: '',
-          hasResidenceCard: '',
-          servicesNeeded: [],
-          professionalInfo: '',
-          futurePlans: '',
-          documents: []
-        });
-        setShowStudentForm(false);
-      } else {
-        alert('Error submitting form. Please try again.');
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Failed to initiate intake');
       }
+
+      const data = await res.json();
+      // -> { clientSecret, submission_id, ... }
+      setIntakeClientSecret(data.clientSecret);
+      setIntakeSubmissionId(data.submission_id ?? data.submissionId ?? null);
+      setShowIntakePayment(true);
     } catch (error) {
-      console.error('Error submitting student intake form:', error);
-      alert('Error submitting form. Please try again.');
+      console.error('Error initiating student intake payment:', error);
+      alert('Error starting payment. Please try again.');
     }
   };
 
@@ -780,6 +780,54 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
             clientSecret={clientSecret}
             bookingId={bookingId}
             onClose={() => setShowPayment(false)}
+          />
+        </Elements>
+      )}
+
+      {/* Student Intake Payment Modal */}
+      {showIntakePayment && intakeClientSecret && intakeSubmissionId && (
+        <Elements stripe={stripePromise} options={{ clientSecret: intakeClientSecret }}>
+          <StudentIntakePaymentModal
+            submissionId={intakeSubmissionId}
+            onClose={() => setShowIntakePayment(false)}
+            onPaid={async () => {
+              // Optional: verify status from backend
+              try {
+                const token = localStorage.getItem('token');
+                const statusRes = await fetch(`http://127.0.0.1:8000/api/auth/student-intake/status/${intakeSubmissionId}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                const statusData = await statusRes.json();
+                if (statusData.status === 'paid') {
+                  alert('Student intake form submitted successfully!');
+                  // reset form
+                  setStudentForm({
+                    fullName: '',
+                    email: '',
+                    contactPhone: '',
+                    nationality: '',
+                    targetCountry: '',
+                    currentSituation: '',
+                    visaExpiryDate: '',
+                    hasResidenceCard: '',
+                    servicesNeeded: [],
+                    professionalInfo: '',
+                    futurePlans: '',
+                    documents: [],
+                  });
+                  setShowStudentForm(false);
+                } else {
+                  // (rare) webhook delay; you can show a soft notice or retry
+                  alert('Payment received. Finalizing your submission, please refresh in a moment.');
+                }
+              } catch (e) {
+                console.error(e);
+              } finally {
+                setShowIntakePayment(false);
+                setIntakeClientSecret(null);
+                setIntakeSubmissionId(null);
+              }
+            }}
           />
         </Elements>
       )}
