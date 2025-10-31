@@ -32,7 +32,7 @@ const defaultIcon = new Icon({
 });
 
 interface PointOfInterest {
-  id: string;
+  id: number | string; // <-- allow numeric IDs from backend
   name: string;
   type:
     | 'event'
@@ -115,51 +115,40 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
   // Function to format image URL - KEEP points-of-interest/ in the path
   const formatImageUrl = (imagePath: string | undefined): string | undefined => {
     if (!imagePath) return undefined;
-    
-    // If it's already a full URL, return as is
-    if (imagePath.startsWith('http')) {
-      return imagePath;
-    }
-    
-    // If it's just a filename, prepend the points-of-interest path
+    if (imagePath.startsWith('http')) return imagePath;
     if (!imagePath.includes('/')) {
       return `http://127.0.0.1:8000/storage/points-of-interest/${imagePath}`;
     }
-    
-    // If it already contains points-of-interest/, use it as is with the base URL
     if (imagePath.includes('points-of-interest/')) {
-      // Extract the path after points-of-interest/ if it's a full encoded string
       const parts = imagePath.split('points-of-interest/');
       const filename = parts[1] || parts[0];
       return `http://127.0.0.1:8000/storage/points-of-interest/${filename}`;
     }
-    
-    // Default case - assume it's a filename and add the full path
     return `http://127.0.0.1:8000/storage/points-of-interest/${imagePath}`;
   };
 
   // Function to format price with euro symbol
   const formatPrice = (price: string | undefined): string | undefined => {
     if (!price) return undefined;
-    
-    // If price already starts with €, return as is
-    if (price.startsWith('€')) {
-      return price;
-    }
-    
-    // Add € before the price
+    if (price.startsWith('€')) return price;
     return `€${price}`;
   };
 
   // Check if POI type supports appointments - ONLY ACCOMMODATION FOR NOW
   const supportsAppointments = (type: string): boolean => {
-    return type === 'accommodation'; // Only accommodation for now
+    return type === 'accommodation';
   };
 
   // Handle appointment submission
   const handleAppointmentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPOI) return;
+
+    const poiIdNum = Number(selectedPOI.id);
+    if (!Number.isInteger(poiIdNum)) {
+      alert('This property cannot be booked here. Please select an accommodation from the map.');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -170,24 +159,29 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
           'Accept': 'application/json',
         },
         body: JSON.stringify({
-          point_of_interest_id: selectedPOI.id,
+          point_of_interest_id: poiIdNum,
           ...appointmentFormData
         }),
       });
 
-      if (response.ok) {
-        setViewMode('success');
-        // Reset form
-        setAppointmentFormData({
-          appointment_date: '',
-          end_date: '',
-          number_of_guests: 1,
-          special_requests: '',
-          appointment_details: {}
-        });
-      } else {
-        throw new Error('Failed to create appointment');
+      const payload = await response.json().catch(() => ({} as any));
+
+      if (!response.ok) {
+        const msg =
+          (payload && (payload.message || payload.error)) ||
+          'Failed to create appointment';
+        alert(msg);
+        return;
       }
+
+      setViewMode('success');
+      setAppointmentFormData({
+        appointment_date: '',
+        end_date: '',
+        number_of_guests: 1,
+        special_requests: '',
+        appointment_details: {}
+      });
     } catch (error) {
       console.error('Error creating appointment:', error);
       alert('Failed to create appointment. Please try again.');
@@ -231,7 +225,6 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
     const newType = selectedType === type ? null : type;
     setSelectedType(newType);
     
-    // Clear selected POI if it doesn't match the new filter
     if (selectedPOI && newType && selectedPOI.type !== newType) {
       setSelectedPOI(null);
       setViewMode('details');
@@ -704,7 +697,8 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
               </a>
             )}
             
-            {supportsAppointments(selectedPOI.type) && (
+            {supportsAppointments(selectedPOI.type) &&
+             Number.isInteger(Number(selectedPOI.id)) && (
               <button
                 onClick={handleMakeAppointment}
                 className="flex items-center justify-center gap-2 w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors"
@@ -757,13 +751,12 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
                 radius={500}
                 pathOptions={{ color: 'purple', fillColor: 'purple', fillOpacity: 0.1 }}
               />
-              {/* Default marker removed from here */}
             </LayerGroup>
 
             {/* Points of interest markers */}
             {filteredPOIs.map((poi) => (
               <Marker
-                key={poi.id}
+                key={String(poi.id)}
                 position={poi.position}
                 icon={getMarkerIcon(poi.type)}
                 eventHandlers={{
@@ -796,7 +789,8 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
                         <span className="text-gray-600">{poi.price}</span>
                       )}
                     </div>
-                    {supportsAppointments(poi.type) && (
+                    {supportsAppointments(poi.type) &&
+                     Number.isInteger(Number(poi.id)) && (
                       <button
                         onClick={() => {
                           setSelectedPOI(poi);
