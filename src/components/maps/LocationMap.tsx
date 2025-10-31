@@ -106,6 +106,19 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
     return `http://127.0.0.1:8000/storage/points-of-interest/${imagePath}`;
   };
 
+  // Function to format price with euro symbol
+  const formatPrice = (price: string | undefined): string | undefined => {
+    if (!price) return undefined;
+    
+    // If price already starts with €, return as is
+    if (price.startsWith('€')) {
+      return price;
+    }
+    
+    // Add € before the price
+    return `€${price}`;
+  };
+
   // Default points of interest (updated with proper image URLs)
   const defaultPOIs: PointOfInterest[] = [
     {
@@ -207,7 +220,8 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
   const pointsOfInterest = propPOIs ? 
     propPOIs.map(poi => ({
       ...poi,
-      image: formatImageUrl(poi.image)
+      image: formatImageUrl(poi.image),
+      price: formatPrice(poi.price)
     })) : 
     defaultPOIs;
 
