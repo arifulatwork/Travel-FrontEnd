@@ -14,7 +14,10 @@ import {
   Ticket,       // used for "event"
   Bus,          // used for "shuttle"
   Gavel,        // used for "legal advice"
-  BadgeCheck    // used for "NIE/TIE"
+  BadgeCheck,   // used for "NIE/TIE"
+  Calendar,
+  ArrowLeft,
+  CheckCircle
 } from 'lucide-react';
 
 // Fix for default marker icon
@@ -56,6 +59,24 @@ interface PointOfInterest {
   };
 }
 
+interface AppointmentFormData {
+  appointment_date: string;
+  end_date?: string;
+  number_of_guests: number;
+  special_requests: string;
+  appointment_details: {
+    room_type?: string;
+    cuisine_preferences?: string;
+    duration?: string;
+    equipment_rental?: boolean;
+    consultation_type?: string;
+    document_preparation?: boolean;
+    service_type?: string;
+    documents?: string[];
+    ticket_type?: string;
+  };
+}
+
 interface LocationMapProps {
   center: {
     lat: number;
@@ -65,9 +86,20 @@ interface LocationMapProps {
   pointsOfInterest?: PointOfInterest[];
 }
 
+type ViewMode = 'details' | 'appointment' | 'success';
+
 const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfInterest: propPOIs }) => {
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedPOI, setSelectedPOI] = useState<PointOfInterest | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('details');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [appointmentFormData, setAppointmentFormData] = useState<AppointmentFormData>({
+    appointment_date: '',
+    end_date: '',
+    number_of_guests: 1,
+    special_requests: '',
+    appointment_details: {}
+  });
 
   // Parse coordinates from point format if needed
   const parseCoordinates = (coords: any) => {
@@ -117,6 +149,81 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
     
     // Add € before the price
     return `€${price}`;
+  };
+
+  // Check if POI type supports appointments - ONLY ACCOMMODATION FOR NOW
+  const supportsAppointments = (type: string): boolean => {
+    return type === 'accommodation'; // Only accommodation for now
+  };
+
+  // Handle appointment submission
+  const handleAppointmentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPOI) return;
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/appointments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          point_of_interest_id: selectedPOI.id,
+          ...appointmentFormData
+        }),
+      });
+
+      if (response.ok) {
+        setViewMode('success');
+        // Reset form
+        setAppointmentFormData({
+          appointment_date: '',
+          end_date: '',
+          number_of_guests: 1,
+          special_requests: '',
+          appointment_details: {}
+        });
+      } else {
+        throw new Error('Failed to create appointment');
+      }
+    } catch (error) {
+      console.error('Error creating appointment:', error);
+      alert('Failed to create appointment. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleInputChange = (field: string, value: any) => {
+    setAppointmentFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleDetailsChange = (field: string, value: any) => {
+    setAppointmentFormData(prev => ({
+      ...prev,
+      appointment_details: {
+        ...prev.appointment_details,
+        [field]: value
+      }
+    }));
+  };
+
+  const handleMakeAppointment = () => {
+    setViewMode('appointment');
+  };
+
+  const handleBackToDetails = () => {
+    setViewMode('details');
+    setIsSubmitting(false);
+  };
+
+  const handleNewAppointment = () => {
+    setViewMode('appointment');
   };
 
   // Default points of interest (updated with proper image URLs)
@@ -303,6 +410,265 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
     );
   }
 
+  // Render different content based on view mode
+  const renderDetailsPanelContent = () => {
+    if (!selectedPOI) {
+      return (
+        <div className="h-full flex items-center justify-center text-gray-500">
+          Select a point of interest to see details
+        </div>
+      );
+    }
+
+    if (viewMode === 'success') {
+      return (
+        <div className="h-full flex flex-col items-center justify-center text-center p-4">
+          <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Appointment Booked!</h3>
+          <p className="text-gray-600 mb-6">Your appointment has been successfully scheduled.</p>
+          <div className="flex gap-3 w-full max-w-xs">
+            <button
+              onClick={handleNewAppointment}
+              className="flex-1 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              New Appointment
+            </button>
+            <button
+              onClick={handleBackToDetails}
+              className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
+            >
+              Back to Details
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (viewMode === 'appointment') {
+      return (
+        <div className="h-full overflow-y-auto">
+          <div className="flex items-center gap-2 mb-4 pb-3 border-b">
+            <button
+              onClick={handleBackToDetails}
+              className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <h3 className="text-lg font-semibold">Book Accommodation</h3>
+          </div>
+
+          {/* Show image in appointment view */}
+          {selectedPOI.image && (
+            <img
+              src={selectedPOI.image}
+              alt={selectedPOI.name}
+              className="w-full h-32 object-cover rounded-lg mb-4"
+              onError={handleImageError}
+            />
+          )}
+
+          <div className="flex items-center gap-2 mb-4">
+            {getTypeIcon(selectedPOI.type)}
+            <h4 className="font-semibold text-gray-800">{selectedPOI.name}</h4>
+          </div>
+
+          <form onSubmit={handleAppointmentSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Check-in Date
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={appointmentFormData.appointment_date}
+                  onChange={(e) => handleInputChange('appointment_date', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Check-out Date
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={appointmentFormData.end_date}
+                  onChange={(e) => handleInputChange('end_date', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Room Type
+              </label>
+              <select
+                required
+                value={appointmentFormData.appointment_details.room_type || ''}
+                onChange={(e) => handleDetailsChange('room_type', e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="">Select room type</option>
+                <option value="single">Single Room</option>
+                <option value="double">Double Room</option>
+                <option value="twin">Twin Room</option>
+                <option value="suite">Suite</option>
+                <option value="apartment">Apartment</option>
+                <option value="studio">Studio</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Number of Guests
+              </label>
+              <select
+                required
+                value={appointmentFormData.number_of_guests}
+                onChange={(e) => handleInputChange('number_of_guests', parseInt(e.target.value))}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="1">1 Guest</option>
+                <option value="2">2 Guests</option>
+                <option value="3">3 Guests</option>
+                <option value="4">4 Guests</option>
+                <option value="5">5+ Guests</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Special Requests
+              </label>
+              <textarea
+                rows={3}
+                value={appointmentFormData.special_requests}
+                onChange={(e) => handleInputChange('special_requests', e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="Any special requirements, early check-in, late check-out, etc."
+              />
+            </div>
+
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="font-medium text-gray-800 mb-2">Accommodation Details</h4>
+              <div className="space-y-1 text-sm text-gray-600">
+                <div className="flex justify-between">
+                  <span>Property:</span>
+                  <span className="font-medium">{selectedPOI.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Rating:</span>
+                  <span className="text-yellow-500">★ {selectedPOI.rating}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Price Range:</span>
+                  <span className="font-medium">{selectedPOI.price}</span>
+                </div>
+                {selectedPOI.amenities && (
+                  <div className="flex justify-between">
+                    <span>Amenities:</span>
+                    <span className="font-medium">{selectedPOI.amenities.slice(0, 2).join(', ')}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex-1 bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+              >
+                {isSubmitting ? 'Booking...' : 'Confirm Booking'}
+              </button>
+              <button
+                type="button"
+                onClick={handleBackToDetails}
+                className="flex-1 bg-gray-300 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-400 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      );
+    }
+
+    // Default details view
+    return (
+      <div className="space-y-4">
+        {selectedPOI.image && (
+          <img
+            src={selectedPOI.image}
+            alt={selectedPOI.name}
+            className="w-full h-48 object-cover rounded-lg"
+            onError={handleImageError}
+          />
+        )}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            {getTypeIcon(selectedPOI.type)}
+            <h3 className="font-semibold text-lg">{selectedPOI.name}</h3>
+          </div>
+          <p className="text-gray-600 text-sm mb-3">{selectedPOI.description}</p>
+
+          {selectedPOI.type === 'shuttle' && selectedPOI.shuttleDetails && (
+            <div className="space-y-2 text-sm">
+              <p><strong>Frequency:</strong> {selectedPOI.shuttleDetails.frequency}</p>
+              <p><strong>Capacity:</strong> {selectedPOI.shuttleDetails.capacity} passengers</p>
+              <p><strong>Duration:</strong> {selectedPOI.shuttleDetails.duration}</p>
+            </div>
+          )}
+
+          {selectedPOI.amenities && (
+            <div className="flex flex-wrap gap-2 my-3">
+              {selectedPOI.amenities.map((amenity, index) => (
+                <span key={index} className="text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded-full">
+                  {amenity}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between text-sm mb-4">
+            {selectedPOI.rating && (
+              <span className="text-yellow-500">★ {selectedPOI.rating}</span>
+            )}
+            {selectedPOI.price && (
+              <span className="text-gray-600">{selectedPOI.price}</span>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            {selectedPOI.bookingUrl && (
+              <a
+                href={selectedPOI.bookingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full bg-purple-600 text-white text-center py-2 rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                Book Now
+              </a>
+            )}
+            
+            {supportsAppointments(selectedPOI.type) && (
+              <button
+                onClick={handleMakeAppointment}
+                className="flex items-center justify-center gap-2 w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <Calendar className="h-4 w-4" />
+                Book Accommodation
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex gap-2 flex-wrap">
@@ -351,7 +717,10 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
                 position={poi.position}
                 icon={getMarkerIcon(poi.type)}
                 eventHandlers={{
-                  click: () => setSelectedPOI(poi)
+                  click: () => {
+                    setSelectedPOI(poi);
+                    setViewMode('details');
+                  }
                 }}
               >
                 <Popup>
@@ -377,6 +746,17 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
                         <span className="text-gray-600">{poi.price}</span>
                       )}
                     </div>
+                    {supportsAppointments(poi.type) && (
+                      <button
+                        onClick={() => {
+                          setSelectedPOI(poi);
+                          setViewMode('appointment');
+                        }}
+                        className="w-full mt-2 bg-green-600 text-white py-1 px-3 rounded text-xs hover:bg-green-700 transition-colors"
+                      >
+                        Book Now
+                      </button>
+                    )}
                   </div>
                 </Popup>
               </Marker>
@@ -386,66 +766,7 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
 
         {/* Details Panel */}
         <div className="bg-white p-4 rounded-xl shadow-sm h-[500px] overflow-y-auto">
-          {selectedPOI ? (
-            <div className="space-y-4">
-              {selectedPOI.image && (
-                <img
-                  src={selectedPOI.image}
-                  alt={selectedPOI.name}
-                  className="w-full h-48 object-cover rounded-lg"
-                  onError={handleImageError}
-                />
-              )}
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  {getTypeIcon(selectedPOI.type)}
-                  <h3 className="font-semibold text-lg">{selectedPOI.name}</h3>
-                </div>
-                <p className="text-gray-600 text-sm mb-3">{selectedPOI.description}</p>
-
-                {selectedPOI.type === 'shuttle' && selectedPOI.shuttleDetails && (
-                  <div className="space-y-2 text-sm">
-                    <p><strong>Frequency:</strong> {selectedPOI.shuttleDetails.frequency}</p>
-                    <p><strong>Capacity:</strong> {selectedPOI.shuttleDetails.capacity} passengers</p>
-                    <p><strong>Duration:</strong> {selectedPOI.shuttleDetails.duration}</p>
-                  </div>
-                )}
-
-                {selectedPOI.amenities && (
-                  <div className="flex flex-wrap gap-2 my-3">
-                    {selectedPOI.amenities.map((amenity, index) => (
-                      <span key={index} className="text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded-full">
-                        {amenity}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between text-sm mb-4">
-                  {selectedPOI.rating && (
-                    <span className="text-yellow-500">★ {selectedPOI.rating}</span>
-                  )}
-                  {selectedPOI.price && (
-                    <span className="text-gray-600">{selectedPOI.price}</span>
-                  )}
-                </div>
-                {selectedPOI.bookingUrl && (
-                  <a
-                    href={selectedPOI.bookingUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block w-full bg-purple-600 text-white text-center py-2 rounded-lg hover:bg-purple-700 transition-colors"
-                  >
-                    Book Now
-                  </a>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="h-full flex items-center justify-center text-gray-500">
-              Select a point of interest to see details
-            </div>
-          )}
+          {renderDetailsPanelContent()}
         </div>
       </div>
     </div>
