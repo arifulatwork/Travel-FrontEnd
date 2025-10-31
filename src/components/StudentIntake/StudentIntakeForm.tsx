@@ -345,7 +345,7 @@ const StudentIntakeForm: React.FC<Props> = ({ onPaymentReady }) => {
                   <div className="flex items-center gap-2">
                     <Euro className="h-4 w-4 text-purple-600" />
                     <span className="text-sm font-medium text-gray-900">
-                      I agree to pay €100 for the student intake consultation
+                      I agree to pay €90 for the student intake consultation
                     </span>
                   </div>
                   <p className="text-xs text-gray-600 mt-1">
