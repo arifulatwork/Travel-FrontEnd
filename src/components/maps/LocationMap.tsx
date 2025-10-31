@@ -226,6 +226,18 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
     setViewMode('appointment');
   };
 
+  // Handle type filter change
+  const handleTypeFilter = (type: string) => {
+    const newType = selectedType === type ? null : type;
+    setSelectedType(newType);
+    
+    // Clear selected POI if it doesn't match the new filter
+    if (selectedPOI && newType && selectedPOI.type !== newType) {
+      setSelectedPOI(null);
+      setViewMode('details');
+    }
+  };
+
   // Default points of interest (updated with proper image URLs)
   const defaultPOIs: PointOfInterest[] = [
     {
@@ -414,8 +426,46 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
   const renderDetailsPanelContent = () => {
     if (!selectedPOI) {
       return (
-        <div className="h-full flex items-center justify-center text-gray-500">
-          Select a point of interest to see details
+        <div className="h-full flex flex-col items-center justify-center text-center p-4 text-gray-500">
+          {selectedType ? (
+            <>
+              <div className="text-4xl mb-2">
+                {getTypeIcon(selectedType)}
+              </div>
+              <p>Select a {selectedType} to see details</p>
+              <p className="text-sm mt-2 text-gray-400">
+                Click on any {selectedType} marker on the map
+              </p>
+            </>
+          ) : (
+            <>
+              <p>Select a point of interest to see details</p>
+              <p className="text-sm mt-2 text-gray-400">
+                Click on any marker on the map or filter by category
+              </p>
+            </>
+          )}
+        </div>
+      );
+    }
+
+    // Check if selected POI matches the current filter
+    if (selectedType && selectedPOI.type !== selectedType) {
+      return (
+        <div className="h-full flex flex-col items-center justify-center text-center p-4 text-gray-500">
+          <div className="text-4xl mb-2">
+            {getTypeIcon(selectedType)}
+          </div>
+          <p>Select a {selectedType} to see details</p>
+          <p className="text-sm mt-2 text-gray-400">
+            Currently viewing: {selectedPOI.type}
+          </p>
+          <button
+            onClick={() => setSelectedPOI(null)}
+            className="mt-4 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            Clear Selection
+          </button>
         </div>
       );
     }
@@ -675,7 +725,7 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
         {categories.map(({ type, label }) => (
           <button
             key={type}
-            onClick={() => setSelectedType(selectedType === type ? null : type)}
+            onClick={() => handleTypeFilter(type)}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${
               selectedType === type
                 ? 'bg-purple-600 text-white'
