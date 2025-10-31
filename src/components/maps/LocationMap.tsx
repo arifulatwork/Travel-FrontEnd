@@ -31,7 +31,6 @@ const defaultIcon = new Icon({
 interface PointOfInterest {
   id: string;
   name: string;
-  // ✅ Kept types
   type:
     | 'event'
     | 'restaurant'
@@ -42,8 +41,6 @@ interface PointOfInterest {
     | 'accommodation'
     | 'legal advice'
     | 'NIE/TIE';
-  // ❌ Commented (removed) types:
-  // 'flight' | 'museum' | 'hotel'
   position: [number, number];
   description: string;
   rating?: number;
@@ -52,14 +49,6 @@ interface PointOfInterest {
   bookingUrl?: string;
   schedule?: string;
   amenities?: string[];
-  // ❌ Commented (removed) flight-specific details
-  // flightDetails?: {
-  //   departure: string;
-  //   arrival: string;
-  //   airline: string;
-  //   flightNumber: string;
-  // };
-  // Kept shuttle details
   shuttleDetails?: {
     frequency: string;
     capacity: number;
@@ -91,7 +80,33 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
 
   const parsedCenter = parseCoordinates(center);
 
-  // Default points of interest (updated to new types)
+  // Function to format image URL - KEEP points-of-interest/ in the path
+  const formatImageUrl = (imagePath: string | undefined): string | undefined => {
+    if (!imagePath) return undefined;
+    
+    // If it's already a full URL, return as is
+    if (imagePath.startsWith('http')) {
+      return imagePath;
+    }
+    
+    // If it's just a filename, prepend the points-of-interest path
+    if (!imagePath.includes('/')) {
+      return `http://127.0.0.1:8000/storage/points-of-interest/${imagePath}`;
+    }
+    
+    // If it already contains points-of-interest/, use it as is with the base URL
+    if (imagePath.includes('points-of-interest/')) {
+      // Extract the path after points-of-interest/ if it's a full encoded string
+      const parts = imagePath.split('points-of-interest/');
+      const filename = parts[1] || parts[0];
+      return `http://127.0.0.1:8000/storage/points-of-interest/${filename}`;
+    }
+    
+    // Default case - assume it's a filename and add the full path
+    return `http://127.0.0.1:8000/storage/points-of-interest/${imagePath}`;
+  };
+
+  // Default points of interest (updated with proper image URLs)
   const defaultPOIs: PointOfInterest[] = [
     {
       id: 'a1',
@@ -101,7 +116,7 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
       description: 'Comfortable serviced apartments near the center.',
       rating: 4.6,
       price: '€€',
-      image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80',
+      image: formatImageUrl('accommodation.jpg'),
       bookingUrl: '#',
       amenities: ['Kitchen', 'WiFi', 'Washer/Dryer']
     },
@@ -113,7 +128,7 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
       description: 'Traditional local cuisine.',
       rating: 4.5,
       price: '€€',
-      image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80',
+      image: formatImageUrl('restaurant.jpg'),
       bookingUrl: '#'
     },
     {
@@ -124,7 +139,7 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
       description: 'Cozy bar with signature coffees and mocktails.',
       rating: 4.3,
       price: '€',
-      image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80'
+      image: formatImageUrl('bar.jpg')
     },
     {
       id: 'ev1',
@@ -133,7 +148,8 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
       position: [parsedCenter.lat - 0.0015, parsedCenter.lng - 0.0015],
       description: 'Open-air stage for live performances.',
       rating: 4.7,
-      price: 'Free'
+      price: 'Free',
+      image: formatImageUrl('event.jpg')
     },
     {
       id: 'att1',
@@ -141,7 +157,8 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
       type: 'attraction',
       position: [parsedCenter.lat + 0.0025, parsedCenter.lng - 0.0005],
       description: 'Historic city gate and photo spot.',
-      rating: 4.4
+      rating: 4.4,
+      image: formatImageUrl('attraction.jpg')
     },
     {
       id: 'act1',
@@ -150,7 +167,8 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
       position: [parsedCenter.lat - 0.002, parsedCenter.lng + 0.0025],
       description: 'Guided kayaking along the river.',
       rating: 4.6,
-      price: '€€'
+      price: '€€',
+      image: formatImageUrl('activity.jpg')
     },
     {
       id: 'sh1',
@@ -159,6 +177,7 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
       position: [parsedCenter.lat + 0.0005, parsedCenter.lng + 0.0005],
       description: 'Express shuttle to/from the airport.',
       price: '€€',
+      image: formatImageUrl('shuttle.jpg'),
       shuttleDetails: {
         frequency: 'Every 30 min',
         capacity: 40,
@@ -171,7 +190,8 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
       type: 'legal advice',
       position: [parsedCenter.lat + 0.001, parsedCenter.lng + 0.003],
       description: 'Consultations on visas and residence permits.',
-      rating: 4.8
+      rating: 4.8,
+      image: formatImageUrl('legal.jpg')
     },
     {
       id: 'nie1',
@@ -179,18 +199,19 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
       type: 'NIE/TIE',
       position: [parsedCenter.lat - 0.0025, parsedCenter.lng - 0.0008],
       description: 'Documentation support for NIE/TIE (Spain).',
-      rating: 4.7
+      rating: 4.7,
+      image: formatImageUrl('nie.jpg')
     }
-    // ❌ Commented (removed) examples for flights/museum/hotels
-    // { id: 'f1', name: 'Flight XYZ', type: 'flight', ... }
-    // { id: 'm1', name: 'City Museum', type: 'museum', ... }
-    // { id: 'h1', name: 'Grand Hotel', type: 'hotel', ... }
   ];
 
-  const pointsOfInterest = propPOIs || defaultPOIs;
+  const pointsOfInterest = propPOIs ? 
+    propPOIs.map(poi => ({
+      ...poi,
+      image: formatImageUrl(poi.image)
+    })) : 
+    defaultPOIs;
 
   const getMarkerIcon = (type: string) => {
-    // Assign distinct marker colors to allowed types
     const color =
       type === 'accommodation' ? 'red' :
       type === 'restaurant'    ? 'orange' :
@@ -223,7 +244,6 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
       case 'attraction':
         return <Landmark className="h-4 w-4" />;
       case 'activity':
-        // Pick either Tent or Camera (or both based on context)
         return <Tent className="h-4 w-4" />;
       case 'event':
         return <Ticket className="h-4 w-4" />;
@@ -252,11 +272,13 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
     { type: 'shuttle',       label: 'Airport Shuttle' },
     { type: 'legal advice',  label: 'Legal Advice' },
     { type: 'NIE/TIE',       label: 'NIE/TIE' }
-    // ❌ Commented (removed) categories:
-    // { type: 'flight', label: 'Flights' },
-    // { type: 'museum', label: 'Museums' },
-    // { type: 'hotel',  label: 'Hotels' }
   ];
+
+  // Add error handling for images
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const target = e.target as HTMLImageElement;
+    target.style.display = 'none';
+  };
 
   // Ensure we have valid coordinates
   if (!parsedCenter?.lat || !parsedCenter?.lng) {
@@ -298,18 +320,14 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             />
 
-            {/* Main location marker with radius */}
+            {/* REMOVED default center marker - only show circle */}
             <LayerGroup>
               <Circle
                 center={[parsedCenter.lat, parsedCenter.lng]}
                 radius={500}
                 pathOptions={{ color: 'purple', fillColor: 'purple', fillOpacity: 0.1 }}
               />
-              <Marker position={[parsedCenter.lat, parsedCenter.lng]} icon={defaultIcon}>
-                <Popup>
-                  <div className="font-semibold">City Center</div>
-                </Popup>
-              </Marker>
+              {/* Default marker removed from here */}
             </LayerGroup>
 
             {/* Points of interest markers */}
@@ -329,6 +347,14 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
                       <h3 className="font-semibold">{poi.name}</h3>
                     </div>
                     <p className="text-sm text-gray-600">{poi.description}</p>
+                    {poi.image && (
+                      <img 
+                        src={poi.image} 
+                        alt={poi.name}
+                        className="w-full h-20 object-cover rounded mt-2"
+                        onError={handleImageError}
+                      />
+                    )}
                     <div className="flex items-center justify-between mt-2 text-sm">
                       {poi.rating && (
                         <span className="text-yellow-500">★ {poi.rating}</span>
@@ -353,6 +379,7 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
                   src={selectedPOI.image}
                   alt={selectedPOI.name}
                   className="w-full h-48 object-cover rounded-lg"
+                  onError={handleImageError}
                 />
               )}
               <div>
@@ -361,9 +388,6 @@ const LocationMap: React.FC<LocationMapProps> = ({ center, zoom = 14, pointsOfIn
                   <h3 className="font-semibold text-lg">{selectedPOI.name}</h3>
                 </div>
                 <p className="text-gray-600 text-sm mb-3">{selectedPOI.description}</p>
-
-                {/* ❌ Commented (removed) flight details block */}
-                {/* {selectedPOI.type === 'flight' && selectedPOI.flightDetails && ( ... )} */}
 
                 {selectedPOI.type === 'shuttle' && selectedPOI.shuttleDetails && (
                   <div className="space-y-2 text-sm">
