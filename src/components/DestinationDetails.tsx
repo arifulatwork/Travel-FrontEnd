@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Users, CreditCard, Info, Sun, Moon, Coffee, Music, Utensils, Palette, Search, X, Check, Star, Upload, FileText } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, X, Check, Star } from 'lucide-react';
 import LocationMap from './maps/LocationMap';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
@@ -9,16 +9,8 @@ import StudentIntakePaymentModal from './StudentIntake/StudentIntakePaymentModal
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_yourKeyHere');
 
-interface Coordinates {
-  lat: number;
-  lng: number;
-}
-
-interface PointOfInterest {
-  name: string;
-  coordinates: Coordinates;
-  type: string;
-}
+interface Coordinates { lat: number; lng: number; }
+interface PointOfInterest { name: string; coordinates: Coordinates; type: string; }
 
 interface OpeningHours {
   [key: string]: {
@@ -71,6 +63,15 @@ interface DestinationDetailsProps {
   maxPrice?: number;
 }
 
+/** API row from /api/attractions/{id}/opening-hours */
+interface ApiOpeningHour {
+  day_of_week: number;      // 0=Sun ... 6=Sat
+  open_time: string | null; // "09:00:00" or "09:00"
+  close_time: string | null;
+  is_closed: boolean;
+  timezone?: string | null;
+}
+
 const DestinationDetails: React.FC<DestinationDetailsProps> = ({
   country,
   city,
@@ -91,40 +92,54 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
   const [bookedAttractionIds, setBookedAttractionIds] = useState<number[]>([]);
   const [bookingDetails, setBookingDetails] = useState<AttractionBooking | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
-  
+
   // Student Intake payment state
   const [intakeClientSecret, setIntakeClientSecret] = useState<string | null>(null);
   const [intakeSubmissionId, setIntakeSubmissionId] = useState<number | null>(null);
   const [showIntakePayment, setShowIntakePayment] = useState(false);
 
-  // Default opening hours for guides
+  // --- Default opening hours (final fallback) ---
   const defaultOpeningHours: OpeningHours = {
-    monday: { open: "9:00 AM", close: "6:00 PM" },
-    tuesday: { open: "9:00 AM", close: "6:00 PM" },
-    wednesday: { open: "9:00 AM", close: "6:00 PM" },
-    thursday: { open: "9:00 AM", close: "6:00 PM" },
-    friday: { open: "9:00 AM", close: "6:00 PM" },
-    saturday: { open: "10:00 AM", close: "4:00 PM" },
-    sunday: { open: "", close: "", isClosed: true }
+    monday: { open: '9:00 AM', close: '6:00 PM' },
+    tuesday: { open: '9:00 AM', close: '6:00 PM' },
+    wednesday: { open: '9:00 AM', close: '6:00 PM' },
+    thursday: { open: '9:00 AM', close: '6:00 PM' },
+    friday: { open: '9:00 AM', close: '6:00 PM' },
+    saturday: { open: '10:00 AM', close: '4:00 PM' },
+    sunday: { open: '', close: '', isClosed: true },
+  };
+
+  // --- Opening hours fetched per attraction ---
+  const [openingHoursByAttraction, setOpeningHoursByAttraction] = useState<Record<number, ApiOpeningHour[]>>({});
+
+  const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const getDayNameByIndex = (i: number) => dayNames[i] ?? `Day ${i}`;
+
+  const formatTime24to12 = (time: string | null | undefined) => {
+    if (!time) return '';
+    const [hStr, mStr] = time.split(':');
+    const h = parseInt(hStr || '0', 10);
+    const m = parseInt(mStr || '0', 10);
+    const suffix = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    return `${h12}:${m.toString().padStart(2, '0')} ${suffix}`;
+    // If you prefer 24h, just return `${hStr}:${mStr}`
   };
 
   useEffect(() => {
     const fetchUserAndBookings = async () => {
       try {
         const token = localStorage.getItem('token');
-        
-        // If you don't use user data, you can remove this call safely
+
+        // Optional: user (unused here)
         const userRes = await fetch('http://127.0.0.1:8000/api/auth/user', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
         await userRes.json();
 
+        // Bookings (ensure /api/auth/attraction/bookings exists or alias it)
         const bookingsRes = await fetch('http://127.0.0.1:8000/api/auth/attraction/bookings', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
         const bookingsData = await bookingsRes.json();
         const ids = bookingsData.map((b: any) => b.attraction.id);
@@ -136,6 +151,42 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
 
     fetchUserAndBookings();
   }, []);
+
+  // --- Fetch opening hours for each attraction (public route) ---
+  useEffect(() => {
+    if (!attractions?.length) return;
+
+    const controller = new AbortController();
+
+    const load = async () => {
+      try {
+        const entries = await Promise.all(
+          attractions.map(async (a) => {
+            try {
+              const res = await fetch(`http://127.0.0.1:8000/api/attractions/${a.id}/opening-hours`, {
+                signal: controller.signal,
+              });
+              if (!res.ok) throw new Error(`Failed to load opening hours for attraction ${a.id}`);
+              const data: ApiOpeningHour[] = await res.json();
+              return [a.id, data] as const;
+            } catch (e) {
+              console.warn(e);
+              return [a.id, []] as const;
+            }
+          })
+        );
+
+        const map: Record<number, ApiOpeningHour[]> = {};
+        for (const [id, rows] of entries) map[id] = rows;
+        setOpeningHoursByAttraction(map);
+      } catch (e) {
+        console.error('Opening hours load error:', e);
+      }
+    };
+
+    load();
+    return () => controller.abort();
+  }, [attractions]);
 
   const minGroupSize = Math.min(...attractions.map(a => a.minGroupSize || 0));
   const maxGroupSize = Math.max(...attractions.map(a => a.maxGroupSize || 0));
@@ -160,9 +211,9 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
       return [
         'Masterpiece of Modernist architecture',
         'Religious symbolism and artistic details',
-        'Gaudi\'s innovative architectural techniques',
+        "Gaudi's innovative architectural techniques",
         'UNESCO World Heritage site exploration',
-        'Fascinating construction history since 1882'
+        'Fascinating construction history since 1882',
       ];
     }
     if (attractionName.toLowerCase().includes('gothic quarter')) {
@@ -171,7 +222,7 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
         'Historic Jewish quarter exploration',
         'Ancient Roman wall remains',
         'Gothic cathedral and churches',
-        'Medieval palaces and hidden squares'
+        'Medieval palaces and hidden squares',
       ];
     }
     if (type.toLowerCase().includes('museum')) {
@@ -180,7 +231,7 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
         'Interactive cultural exhibits',
         'Artistic masterpieces showcase',
         'Historical artifact displays',
-        'Cultural context and interpretation'
+        'Cultural context and interpretation',
       ];
     }
     if (type.toLowerCase().includes('monument') || type.toLowerCase().includes('historic')) {
@@ -189,7 +240,7 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
         'Historical context and stories',
         'Cultural heritage preservation',
         'Period-specific design elements',
-        'Local historical importance'
+        'Local historical importance',
       ];
     }
     return [
@@ -197,17 +248,13 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
       'Historical significance exploration',
       'Architectural details and context',
       'Local traditions and customs',
-      'Authentic cultural experience'
+      'Authentic cultural experience',
     ];
   };
 
-  const getOpeningHours = (guide?: Guide): OpeningHours => {
-    return guide?.openingHours || defaultOpeningHours;
-  };
-
-  const formatDayName = (day: string): string => {
-    return day.charAt(0).toUpperCase() + day.slice(1);
-  };
+  const filteredAttractions = attractions.filter(attraction =>
+    (visitType === 'group' && attraction.groupPrice ? attraction.groupPrice : attraction.price) <= maxPrice
+  );
 
   const handleBookNow = async (attraction: Attraction) => {
     try {
@@ -257,9 +304,66 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
     }
   };
 
-  const filteredAttractions = attractions.filter(attraction => 
-    (visitType === 'group' && attraction.groupPrice ? attraction.groupPrice : attraction.price) <= maxPrice
-  );
+  // Prefer API opening hours; fallback to guide.openingHours; then defaults
+  const renderOpeningHours = (attraction: Attraction) => {
+    const apiRows = openingHoursByAttraction[attraction.id];
+    const guideHours = attraction.guide?.openingHours;
+
+    if (apiRows && apiRows.length > 0) {
+      return (
+        <div className="space-y-1">
+          {[...apiRows].sort((a, b) => a.day_of_week - b.day_of_week).map((row) => (
+            <div key={row.day_of_week} className="flex justify-between">
+              <span className="capitalize">{getDayNameByIndex(row.day_of_week)}:</span>
+              <span>
+                {row.is_closed ? (
+                  <span className="text-red-500">Closed</span>
+                ) : (
+                  `${formatTime24to12(row.open_time)} - ${formatTime24to12(row.close_time)}`
+                )}
+              </span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (guideHours) {
+      return (
+        <div className="space-y-1">
+          {Object.entries(guideHours).map(([day, hours]) => (
+            <div key={day} className="flex justify-between">
+              <span className="capitalize">{day.charAt(0).toUpperCase() + day.slice(1)}:</span>
+              <span>
+                {hours.isClosed ? (
+                  <span className="text-red-500">Closed</span>
+                ) : (
+                  `${hours.open} - ${hours.close}`
+                )}
+              </span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-1">
+        {Object.entries(defaultOpeningHours).map(([day, hours]) => (
+          <div key={day} className="flex justify-between">
+            <span className="capitalize">{day.charAt(0).toUpperCase() + day.slice(1)}:</span>
+            <span>
+              {hours.isClosed ? (
+                <span className="text-red-500">Closed</span>
+              ) : (
+                `${hours.open} - ${hours.close}`
+              )}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-8">
@@ -282,9 +386,7 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
           </div>
         </div>
 
-        {description && (
-          <p className="text-gray-600 mb-6">{description}</p>
-        )}
+        {description && <p className="text-gray-600 mb-6">{description}</p>}
 
         {visitType === 'group' && (
           <div className="mb-6 bg-gray-50 rounded-lg overflow-hidden">
@@ -316,11 +418,7 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
           </div>
         )}
 
-        <LocationMap 
-          center={coordinates} 
-          zoom={13} 
-          pointsOfInterest={pointsOfInterest}
-        />
+        <LocationMap center={coordinates} zoom={13} pointsOfInterest={pointsOfInterest} />
       </div>
 
       {/* Student Intake Form Component */}
@@ -338,137 +436,93 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
             <Calendar className="h-6 w-6 text-purple-600" />
             <h2 className="text-xl font-semibold">Attractions & Activities</h2>
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredAttractions.map((attraction, index) => {
-              const openingHours = getOpeningHours(attraction.guide);
-              
-              return (
-                <div key={index} className="bg-gray-50 rounded-lg p-4">
-                  <img
-                    src={getImageUrl(attraction.image)}
-                    alt={attraction.name}
-                    className="w-full h-48 object-cover rounded-lg mb-4"
-                  />
-                  <h3 className="font-semibold text-lg mb-2">{attraction.name}</h3>
-                  <p className="text-gray-600">{attraction.type}</p>
-                  <div className="flex items-center text-gray-500 mt-2">
-                    <Clock className="h-4 w-4 mr-1" />
-                    <span>{attraction.duration}</span>
+            {filteredAttractions.map((attraction, index) => (
+              <div key={index} className="bg-gray-50 rounded-lg p-4">
+                <img
+                  src={getImageUrl(attraction.image)}
+                  alt={attraction.name}
+                  className="w-full h-48 object-cover rounded-lg mb-4"
+                />
+                <h3 className="font-semibold text-lg mb-2">{attraction.name}</h3>
+                <p className="text-gray-600">{attraction.type}</p>
+                <div className="flex items-center text-gray-500 mt-2">
+                  <Clock className="h-4 w-4 mr-1" />
+                  <span>{attraction.duration}</span>
+                </div>
+
+                {visitType === 'group' && attraction.minGroupSize && attraction.maxGroupSize && (
+                  <div className="flex items-center text-gray-500 mt-1">
+                    <Users className="h-4 w-4 mr-1" />
+                    <span>{attraction.minGroupSize}-{attraction.maxGroupSize} people</span>
                   </div>
-                  {visitType === 'group' && attraction.minGroupSize && attraction.maxGroupSize && (
-                    <div className="flex items-center text-gray-500 mt-1">
-                      <Users className="h-4 w-4 mr-1" />
-                      <span>{attraction.minGroupSize}-{attraction.maxGroupSize} people</span>
-                    </div>
-                  )}
-                  {attraction.guide && (
-                    <div className="mt-2 p-2 bg-purple-50 rounded-lg">
-                      {/* 
-                      // --- Temporarily hidden: guide avatar, initials, name, rating, reviews ---
-                      <div className="flex items-center space-x-2">
-                        {attraction.guide.avatar ? (
-                          <img 
-                            src={getImageUrl(attraction.guide.avatar)} 
-                            alt={attraction.guide.name}
-                            className="w-8 h-8 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                            <span className="text-purple-600 font-medium">
-                              {attraction.guide.name.charAt(0)}
-                            </span>
-                          </div>
-                        )}
-                        <div>
-                          <p className="text-sm font-medium">{attraction.guide.name}</p>
-                          <div className="flex items-center text-xs text-gray-500">
-                            <span className="text-yellow-500 mr-1">★</span>
-                            {attraction.guide.rating} ({attraction.guide.reviews} reviews)
-                          </div>
-                        </div>
-                      </div>
-                      */}
+                )}
 
-                      <div className="mt-2 text-xs text-gray-600">
-                        {/* Opening Hours Section */}
-                        <div className="mt-2">
-                          <p className="font-medium mb-1">Opening Hours:</p>
-                          <div className="space-y-1">
-                            {Object.entries(openingHours).map(([day, hours]) => (
-                              <div key={day} className="flex justify-between">
-                                <span className="capitalize">{formatDayName(day)}:</span>
-                                <span>
-                                  {hours.isClosed ? (
-                                    <span className="text-red-500">Closed</span>
-                                  ) : (
-                                    `${hours.open} - ${hours.close}`
-                                  )}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="mt-4 p-3 bg-purple-50 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Star className="h-4 w-4 text-purple-600" />
-                      <h4 className="font-medium text-purple-900">Cultural & Historical Highlights</h4>
-                    </div>
-                    <ul className="space-y-1">
-                      {(attraction.highlights || getDefaultHighlights(attraction.name, attraction.type)).map((highlight, idx) => (
-                        <li key={idx} className="flex items-center gap-2 text-sm text-purple-700">
-                          <Check className="h-4 w-4 text-purple-600 flex-shrink-0" />
-                          <span>{highlight}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="flex items-center justify-between mt-4">
-                    <span className="text-purple-600 font-semibold">
-                      {visitType === 'group' && attraction.groupPrice && groupSize >= minGroupSize
-                        ? `€${(attraction.groupPrice * groupSize).toFixed(2)} `
-                        : `€${attraction.price.toFixed(2)}`}
-                      {visitType === 'group' && attraction.groupPrice && groupSize >= minGroupSize && (
-                        <span className="text-sm text-gray-500"> (€{attraction.groupPrice} per person)</span>
-                      )}
-                    </span>
-                    {bookedAttractionIds.includes(attraction.id) ? (
-                      <button
-                        onClick={() => {
-                          const booked = attractions.find(a => a.id === attraction.id);
-                          setBookingDetails({
-                            attraction: booked!,
-                            status: 'paid',
-                            participants: groupSize || 1,
-                            booking_date: new Date().toISOString(),
-                          });
-                          setShowBookingModal(true);
-                        }}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                      >
-                        View Booking
-                      </button>
-                    ) : (
-                      <button 
-                        onClick={() => handleBookNow(attraction)}
-                        className={`px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 ${
-                          visitType === 'group' && (!groupSize || groupSize < minGroupSize || groupSize > maxGroupSize)
-                            ? 'opacity-50 cursor-not-allowed'
-                            : ''
-                        }`}
-                        disabled={visitType === 'group' && (!groupSize || groupSize < minGroupSize || groupSize > maxGroupSize)}
-                      >
-                        Book Now
-                      </button>
-                    )}
+                {/* Opening Hours Card */}
+                <div className="mt-2 p-2 bg-purple-50 rounded-lg">
+                  <div className="mt-2 text-xs text-gray-600">
+                    <p className="font-medium mb-1">Opening Hours:</p>
+                    {renderOpeningHours(attraction)}
                   </div>
                 </div>
-              );
-            })}
+
+                <div className="mt-4 p-3 bg-purple-50 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Star className="h-4 w-4 text-purple-600" />
+                    <h4 className="font-medium text-purple-900">Cultural & Historical Highlights</h4>
+                  </div>
+                  <ul className="space-y-1">
+                    {(attraction.highlights || getDefaultHighlights(attraction.name, attraction.type)).map((highlight, idx) => (
+                      <li key={idx} className="flex items-center gap-2 text-sm text-purple-700">
+                        <Check className="h-4 w-4 text-purple-600 flex-shrink-0" />
+                        <span>{highlight}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="flex items-center justify-between mt-4">
+                  <span className="text-purple-600 font-semibold">
+                    {visitType === 'group' && attraction.groupPrice && groupSize >= minGroupSize
+                      ? `€${(attraction.groupPrice * groupSize).toFixed(2)} `
+                      : `€${attraction.price.toFixed(2)}`}
+                    {visitType === 'group' && attraction.groupPrice && groupSize >= minGroupSize && (
+                      <span className="text-sm text-gray-500"> (€{attraction.groupPrice} per person)</span>
+                    )}
+                  </span>
+                  {bookedAttractionIds.includes(attraction.id) ? (
+                    <button
+                      onClick={() => {
+                        const booked = attractions.find(a => a.id === attraction.id);
+                        setBookingDetails({
+                          attraction: booked!,
+                          status: 'paid',
+                          participants: groupSize || 1,
+                          booking_date: new Date().toISOString(),
+                        });
+                        setShowBookingModal(true);
+                      }}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    >
+                      View Booking
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleBookNow(attraction)}
+                      className={`px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 ${
+                        visitType === 'group' && (!groupSize || groupSize < minGroupSize || groupSize > maxGroupSize)
+                          ? 'opacity-50 cursor-not-allowed'
+                          : ''
+                      }`}
+                      disabled={visitType === 'group' && (!groupSize || groupSize < minGroupSize || groupSize > maxGroupSize)}
+                    >
+                      Book Now
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       ) : (
@@ -533,37 +587,6 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
               <p><strong>Status:</strong> <span className="text-green-600">Paid</span></p>
               <p><strong>Participants:</strong> {bookingDetails.participants}</p>
               <p><strong>Booking Date:</strong> {new Date(bookingDetails.booking_date).toLocaleString()}</p>
-
-              {/*
-              // --- Temporarily hidden: guide section in booking modal ---
-              {bookingDetails.attraction.guide && (
-                <div className="mt-3 pt-3 border-t">
-                  <p className="font-medium">Your Guide:</p>
-                  <div className="flex items-center space-x-2 mt-1">
-                    {bookingDetails.attraction.guide.avatar ? (
-                      <img 
-                        src={getImageUrl(bookingDetails.attraction.guide.avatar)} 
-                        alt={bookingDetails.attraction.guide.name}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                        <span className="text-purple-600 font-medium">
-                          {bookingDetails.attraction.guide.name.charAt(0)}
-                        </span>
-                      </div>
-                    )}
-                    <div>
-                      <p>{bookingDetails.attraction.guide.name}</p>
-                      <div className="flex items-center text-sm text-gray-500">
-                        <span className="text-yellow-500 mr-1">★</span>
-                        {bookingDetails.attraction.guide.rating} ({bookingDetails.attraction.guide.reviews} reviews)
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              */}
             </div>
           </div>
         </div>
