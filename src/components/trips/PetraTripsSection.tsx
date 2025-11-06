@@ -175,10 +175,10 @@ const PetraTripsSection: React.FC = () => {
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-2">
           <Plane className="h-6 w-6 text-purple-600" />
-          <h2 className="text-2xl font-bold dark:text-white">Petra Tours</h2>
+          <h2 className="text-2xl font-bold dark:text-white">Spain Tours</h2>
         </div>
         <p className="text-gray-600 dark:text-gray-300">
-          Discover the ancient wonders of Petra with our expertly curated tours
+          Discover the ancient wonders of Spain with our expertly curated tours
         </p>
       </div>
 

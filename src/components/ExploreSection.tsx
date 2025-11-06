@@ -322,7 +322,7 @@ const ExploreSection: React.FC<ExploreProps> = () => {
             }`}
           >
             <Plane className="h-4 w-4" />
-            Petra Tours
+            Spain Tours
           </button>
         </div>
       </div>
