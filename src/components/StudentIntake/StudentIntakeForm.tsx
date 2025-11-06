@@ -12,33 +12,33 @@ const StudentIntakeForm: React.FC<Props> = ({ onPaymentReady }) => {
     fullName: '',
     email: '',
     contactPhone: '',
-    
+
     // New location field
     currentLocation: '',
-    
+
     nationality: '',
-    
+
     // Updated visa status fields
     visaStatus: '',
     visaExpiryDate: '',
-    
+
     // Updated residence document field
     hasResidenceCard: '',
-    
+
     // New student status fields
     studentStatus: '',
-    
+
     // New accommodation/insurance fields
     hasAccommodation: '',
     hasHealthInsurance: '',
     hasEmpadronamiento: '',
-    
+
     // Updated services needed
     servicesNeeded: [] as string[],
-    
+
     // Updated professional info field
     additionalInfo: '',
-    
+
     documents: [] as File[],
   });
   const [submitting, setSubmitting] = useState(false);
@@ -76,65 +76,96 @@ const StudentIntakeForm: React.FC<Props> = ({ onPaymentReady }) => {
 
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please sign in to continue.');
+        return;
+      }
+
       const fd = new FormData();
 
-      // Basic info
+      // Required fields
       fd.append('fullName', form.fullName);
       fd.append('email', form.email);
-      fd.append('contactPhone', form.contactPhone);
-      
-      // New location field
       fd.append('currentLocation', form.currentLocation);
-      
       fd.append('nationality', form.nationality);
-      
-      // Updated visa fields
       fd.append('visaStatus', form.visaStatus);
-      fd.append('visaExpiryDate', form.visaExpiryDate);
-      
-      // Updated residence document
       fd.append('hasResidenceCard', form.hasResidenceCard);
-      
-      // New student status
       fd.append('studentStatus', form.studentStatus);
-      
-      // New accommodation fields
-      fd.append('hasAccommodation', form.hasAccommodation);
-      fd.append('hasHealthInsurance', form.hasHealthInsurance);
-      fd.append('hasEmpadronamiento', form.hasEmpadronamiento);
-      
-      // Updated services
+
+      // Optional fields (append only if provided)
+      if (form.contactPhone) fd.append('contactPhone', form.contactPhone);
+      if (form.visaExpiryDate) fd.append('visaExpiryDate', form.visaExpiryDate);
+      if (form.hasAccommodation) fd.append('hasAccommodation', form.hasAccommodation);
+      if (form.hasHealthInsurance) fd.append('hasHealthInsurance', form.hasHealthInsurance);
+      if (form.hasEmpadronamiento) fd.append('hasEmpadronamiento', form.hasEmpadronamiento);
+      if (form.additionalInfo) fd.append('additionalInfo', form.additionalInfo);
+
+      // Arrays / files
       fd.append('services_needed', JSON.stringify(form.servicesNeeded));
-      
-      // Updated additional info
-      fd.append('additionalInfo', form.additionalInfo);
-      
-      // Documents
       form.documents.forEach((file) => fd.append('documents[]', file));
 
       const res = await fetch('http://127.0.0.1:8000/api/auth/student-intake/initiate', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` }, // leave Content-Type unset for FormData
         body: fd,
       });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || 'Failed to initiate intake');
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        data = {};
       }
 
-      const data = await res.json();
-      const clientSecret = data.clientSecret;
-      const submissionId = data.submission_id ?? data.submissionId;
-
-      if (!clientSecret || !submissionId) {
-        throw new Error('Missing clientSecret or submissionId from server.');
+      // 401: auth issue
+      if (res.status === 401) {
+        alert('Your session has expired. Please sign in again.');
+        return;
       }
 
-      onPaymentReady({ clientSecret, submissionId });
+      // 200: existing submission; resume ONLY if Stripe + app say it's unpaid
+      if (res.status === 200 && data.clientSecret && data.submission_id != null) {
+        const unpaidAppStatuses = ['pending_payment', 'payment_requires_action', 'payment_failed'];
+        const unpaidStripeStatuses = ['requires_payment_method', 'requires_confirmation', 'requires_action'];
+
+        const isAppUnpaid =
+          !data.status || unpaidAppStatuses.includes(String(data.status));
+        const isStripeUnpaid =
+          !data.stripe_status || unpaidStripeStatuses.includes(String(data.stripe_status));
+
+        if (isAppUnpaid && isStripeUnpaid) {
+          alert(data.message || 'You already started an application. Please complete your payment.');
+          onPaymentReady({
+            clientSecret: data.clientSecret,
+            submissionId: Number(data.submission_id),
+          });
+        } else {
+          // Payment is considered completed or not actionable; don't open the modal
+          alert('Your payment is already completed. Please wait for our response.');
+        }
+        return;
+      }
+
+      // 409: already submitted / paid / under review
+      if (res.status === 409) {
+        alert(data.message || 'You already submitted. Please wait for our response.');
+        return;
+      }
+
+      // 201: created new submission -> proceed to payment
+      if (res.status === 201 && data.clientSecret && data.submission_id != null) {
+        onPaymentReady({
+          clientSecret: data.clientSecret,
+          submissionId: Number(data.submission_id),
+        });
+        return;
+      }
+
+      // Unexpected
+      throw new Error(data?.message || `Unexpected server response (${res.status}).`);
     } catch (err: any) {
       console.error(err);
-      alert(err.message || 'Error starting payment.');
+      alert(err?.message || 'Error starting payment.');
     } finally {
       setSubmitting(false);
     }
@@ -225,7 +256,7 @@ const StudentIntakeForm: React.FC<Props> = ({ onPaymentReady }) => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm sm:text-base"
               >
                 <option value="">Select nationality</option>
-                {['Spanish', 'French', 'German', 'Italian', 'British', 'American', 'Other'].map(n => (
+                {['Spanish', 'French', 'German', 'Italian', 'British', 'American', 'Other'].map((n) => (
                   <option key={n} value={n}>{n}</option>
                 ))}
               </select>
@@ -351,13 +382,13 @@ const StudentIntakeForm: React.FC<Props> = ({ onPaymentReady }) => {
             <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-3">
               {[
                 'I want to Stay in Spain',
-                'I wanna come to Europe', 
+                'I wanna come to Europe',
                 'Legal advice',
                 'I want to stay in Europe',
                 'Job / internship support',
                 'Help booking NIE/TIE appointment',
-                'I need a lawyer'
-              ].map(svc => (
+                'I need a lawyer',
+              ].map((svc) => (
                 <label key={svc} className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-50 transition-colors">
                   <input
                     type="checkbox"
@@ -411,9 +442,9 @@ const StudentIntakeForm: React.FC<Props> = ({ onPaymentReady }) => {
                         ({(file.size / 1024 / 1024).toFixed(2)} MB)
                       </span>
                     </div>
-                    <button 
-                      type="button" 
-                      onClick={() => removeDocument(idx)} 
+                    <button
+                      type="button"
+                      onClick={() => removeDocument(idx)}
                       className="text-red-500 hover:text-red-700 flex-shrink-0 ml-2"
                     >
                       <X className="h-4 w-4" />
@@ -429,12 +460,16 @@ const StudentIntakeForm: React.FC<Props> = ({ onPaymentReady }) => {
             <label className="flex flex-col sm:flex-row sm:items-center justify-between cursor-pointer gap-3">
               <div className="flex items-center gap-3 flex-1">
                 <div className="flex-shrink-0">
-                  <div className={`relative inline-block w-12 h-6 rounded-full transition-colors duration-200 ease-in-out ${
-                    agreeToPay ? 'bg-purple-600' : 'bg-gray-300'
-                  }`}>
-                    <span className={`absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full transition-transform duration-200 ease-in-out ${
-                      agreeToPay ? 'transform translate-x-6' : ''
-                    }`} />
+                  <div
+                    className={`relative inline-block w-12 h-6 rounded-full transition-colors duration-200 ease-in-out ${
+                      agreeToPay ? 'bg-purple-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full transition-transform duration-200 ease-in-out ${
+                        agreeToPay ? 'transform translate-x-6' : ''
+                      }`}
+                    />
                   </div>
                 </div>
                 <div className="flex-1">
@@ -467,7 +502,7 @@ const StudentIntakeForm: React.FC<Props> = ({ onPaymentReady }) => {
             >
               {submitting ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
                   Starting payment…
                 </>
               ) : (
