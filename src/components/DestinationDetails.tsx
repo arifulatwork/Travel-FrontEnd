@@ -105,7 +105,7 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
     thursday: { open: "9:00 AM", close: "6:00 PM" },
     friday: { open: "9:00 AM", close: "6:00 PM" },
     saturday: { open: "10:00 AM", close: "4:00 PM" },
-    sunday: { open: "10:00 AM", close: "2:00 PM" }
+    sunday: { open: "", close: "", isClosed: true }
   };
 
   useEffect(() => {
