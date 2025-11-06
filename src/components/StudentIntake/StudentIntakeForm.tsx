@@ -12,14 +12,33 @@ const StudentIntakeForm: React.FC<Props> = ({ onPaymentReady }) => {
     fullName: '',
     email: '',
     contactPhone: '',
+    
+    // New location field
+    currentLocation: '',
+    
     nationality: '',
-    targetCountry: '',
-    currentSituation: '',
+    
+    // Updated visa status fields
+    visaStatus: '',
     visaExpiryDate: '',
+    
+    // Updated residence document field
     hasResidenceCard: '',
+    
+    // New student status fields
+    studentStatus: '',
+    
+    // New accommodation/insurance fields
+    hasAccommodation: '',
+    hasHealthInsurance: '',
+    hasEmpadronamiento: '',
+    
+    // Updated services needed
     servicesNeeded: [] as string[],
-    professionalInfo: '',
-    futurePlans: '',
+    
+    // Updated professional info field
+    additionalInfo: '',
+    
     documents: [] as File[],
   });
   const [submitting, setSubmitting] = useState(false);
@@ -59,17 +78,38 @@ const StudentIntakeForm: React.FC<Props> = ({ onPaymentReady }) => {
       const token = localStorage.getItem('token');
       const fd = new FormData();
 
+      // Basic info
       fd.append('fullName', form.fullName);
       fd.append('email', form.email);
       fd.append('contactPhone', form.contactPhone);
+      
+      // New location field
+      fd.append('currentLocation', form.currentLocation);
+      
       fd.append('nationality', form.nationality);
-      fd.append('targetCountry', form.targetCountry);
-      fd.append('currentSituation', form.currentSituation);
+      
+      // Updated visa fields
+      fd.append('visaStatus', form.visaStatus);
       fd.append('visaExpiryDate', form.visaExpiryDate);
+      
+      // Updated residence document
       fd.append('hasResidenceCard', form.hasResidenceCard);
+      
+      // New student status
+      fd.append('studentStatus', form.studentStatus);
+      
+      // New accommodation fields
+      fd.append('hasAccommodation', form.hasAccommodation);
+      fd.append('hasHealthInsurance', form.hasHealthInsurance);
+      fd.append('hasEmpadronamiento', form.hasEmpadronamiento);
+      
+      // Updated services
       fd.append('services_needed', JSON.stringify(form.servicesNeeded));
-      fd.append('professionalInfo', form.professionalInfo);
-      fd.append('futurePlans', form.futurePlans);
+      
+      // Updated additional info
+      fd.append('additionalInfo', form.additionalInfo);
+      
+      // Documents
       form.documents.forEach((file) => fd.append('documents[]', file));
 
       const res = await fetch('http://127.0.0.1:8000/api/auth/student-intake/initiate', {
@@ -158,9 +198,26 @@ const StudentIntakeForm: React.FC<Props> = ({ onPaymentReady }) => {
               />
             </div>
 
-            {/* Nationality */}
+            {/* 1) Where are you right now? */}
             <div className="col-span-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Nationality *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">1) Where are you right now? *</label>
+              <select
+                required
+                value={form.currentLocation}
+                onChange={(e) => handleChange('currentLocation', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm sm:text-base"
+              >
+                <option value="">Select your location</option>
+                <option value="spain">🇪🇸 I'm already in Spain</option>
+                <option value="europe_not_spain">🌍 I am in Europe (not Spain)</option>
+                <option value="outside_europe">🌎 I am not in Europe</option>
+                <option value="not_in_spain_yet">🌍 I'm not in Spain yet</option>
+              </select>
+            </div>
+
+            {/* 2) What is your nationality? */}
+            <div className="col-span-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">2) What is your nationality? *</label>
               <select
                 required
                 value={form.nationality}
@@ -168,45 +225,31 @@ const StudentIntakeForm: React.FC<Props> = ({ onPaymentReady }) => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm sm:text-base"
               >
                 <option value="">Select nationality</option>
-                {['Spanish','French','German','Italian','British','American','Other'].map(n => (
+                {['Spanish', 'French', 'German', 'Italian', 'British', 'American', 'Other'].map(n => (
                   <option key={n} value={n}>{n}</option>
                 ))}
               </select>
             </div>
 
-            {/* Target country */}
+            {/* 3) What is your current visa status? */}
             <div className="col-span-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Target country</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">3) What is your current visa status? *</label>
               <select
-                value={form.targetCountry}
-                onChange={(e) => handleChange('targetCountry', e.target.value)}
+                required
+                value={form.visaStatus}
+                onChange={(e) => handleChange('visaStatus', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm sm:text-base"
               >
-                <option value="">Select a country</option>
-                {['Spain','France','Germany','Italy','UK'].map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
+                <option value="">Select visa status</option>
+                <option value="valid">✅ I have a valid visa</option>
+                <option value="expiring_soon">⏳ My visa expires soon</option>
+                <option value="none">❌ I don't have a visa</option>
               </select>
             </div>
 
-            {/* Current situation */}
+            {/* Visa expiry date */}
             <div className="col-span-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Current situation</label>
-              <select
-                value={form.currentSituation}
-                onChange={(e) => handleChange('currentSituation', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm sm:text-base"
-              >
-                <option value="">Choose</option>
-                {['Prospective student','Current student','Graduate','Working professional'].map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Visa expiry */}
-            <div className="col-span-1 md:col-span-2 lg:col-span-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Visa / Permit expiry date</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">If you have a valid visa, expiry date (optional)</label>
               <input
                 type="date"
                 value={form.visaExpiryDate}
@@ -215,26 +258,106 @@ const StudentIntakeForm: React.FC<Props> = ({ onPaymentReady }) => {
               />
             </div>
 
-            {/* Residence card */}
-            <div className="col-span-1 md:col-span-2 lg:col-span-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">TIE/NIE/Residence card?</label>
+            {/* 4) Do you have a NIE/TIE? */}
+            <div className="col-span-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">4) Do you have a NIE/TIE (Spanish residence document)? *</label>
               <select
+                required
                 value={form.hasResidenceCard}
                 onChange={(e) => handleChange('hasResidenceCard', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm sm:text-base"
               >
-                {['','Yes','No','In process'].map(v => (
-                  <option key={v} value={v}>{v || 'Select'}</option>
-                ))}
+                <option value="">Select</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+                <option value="in_process">In process</option>
+              </select>
+            </div>
+
+            {/* 5) Are you currently a student? */}
+            <div className="col-span-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">5) Are you currently a student? *</label>
+              <select
+                required
+                value={form.studentStatus}
+                onChange={(e) => handleChange('studentStatus', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm sm:text-base"
+              >
+                <option value="">Select student status</option>
+                <option value="current_student">🎓 Yes, I'm a student</option>
+                <option value="finished_bachelor">I have finished with my bachelor</option>
+                <option value="finished_master">I have finished with my master</option>
+                <option value="not_student">🧑‍💼 No, I'm not a student</option>
+                <option value="graduate">🎓 I'm a Graduate student (I have finished my studies)</option>
+              </select>
+            </div>
+
+            {/* Accommodation, Health Insurance, Empadronamiento */}
+            <div className="col-span-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Do you have accommodation?</label>
+              <select
+                value={form.hasAccommodation}
+                onChange={(e) => handleChange('hasAccommodation', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm sm:text-base"
+              >
+                <option value="">Select</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+
+            <div className="col-span-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Do you have health insurance?</label>
+              <select
+                value={form.hasHealthInsurance}
+                onChange={(e) => handleChange('hasHealthInsurance', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm sm:text-base"
+              >
+                <option value="">Select</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+
+            <div className="col-span-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Do you have the empadronamiento?</label>
+              <select
+                value={form.hasEmpadronamiento}
+                onChange={(e) => handleChange('hasEmpadronamiento', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm sm:text-base"
+              >
+                <option value="">Select</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
               </select>
             </div>
           </div>
 
+          {/* Additional Information */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Additional information</label>
+            <textarea
+              value={form.additionalInfo}
+              onChange={(e) => handleChange('additionalInfo', e.target.value)}
+              placeholder="Any extra details we should know (studies, timelines, needs)"
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm sm:text-base resize-vertical"
+            />
+          </div>
+
           {/* Services */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">Which services do you need?</label>
+            <label className="block text-sm font-medium text-gray-700 mb-3">Which services do you need? (choose all that apply)</label>
             <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-3">
-              {['Legal advice','Accommodation search','Documentation support','Student visa assistance','Job / internship support','Other'].map(svc => (
+              {[
+                'I want to Stay in Spain',
+                'I wanna come to Europe', 
+                'Legal advice',
+                'I want to stay in Europe',
+                'Job / internship support',
+                'Help booking NIE/TIE appointment',
+                'I need a lawyer'
+              ].map(svc => (
                 <label key={svc} className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-50 transition-colors">
                   <input
                     type="checkbox"
@@ -246,33 +369,6 @@ const StudentIntakeForm: React.FC<Props> = ({ onPaymentReady }) => {
                 </label>
               ))}
             </div>
-          </div>
-
-          {/* Professional info */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Professional / academic information</label>
-            <textarea
-              value={form.professionalInfo}
-              onChange={(e) => handleChange('professionalInfo', e.target.value)}
-              placeholder="Briefly list degree, field of study, institution, and current employment or internship"
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm sm:text-base resize-vertical"
-            />
-          </div>
-
-          {/* Future plans */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Future plans</label>
-            <select
-              value={form.futurePlans}
-              onChange={(e) => handleChange('futurePlans', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm sm:text-base"
-            >
-              <option value="">Select an option</option>
-              {['Continue studies','Find job','Start internship','Start business','Return home country'].map(p => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
           </div>
 
           {/* Uploads */}
@@ -345,7 +441,7 @@ const StudentIntakeForm: React.FC<Props> = ({ onPaymentReady }) => {
                   <div className="flex items-center gap-2">
                     <Euro className="h-4 w-4 text-purple-600" />
                     <span className="text-sm font-medium text-gray-900">
-                      I agree to pay €90 for the student intake consultation
+                      I agree to pay the €90 consultation fee for professional guidance and legal advice related to my case.
                     </span>
                   </div>
                   <p className="text-xs text-gray-600 mt-1">
@@ -377,7 +473,7 @@ const StudentIntakeForm: React.FC<Props> = ({ onPaymentReady }) => {
               ) : (
                 <>
                   <Euro className="h-4 w-4" />
-                  Submit & Pay €100
+                  Submit & Pay €90
                 </>
               )}
             </button>
