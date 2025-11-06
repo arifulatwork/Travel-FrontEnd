@@ -20,6 +20,14 @@ interface PointOfInterest {
   type: string;
 }
 
+interface OpeningHours {
+  [key: string]: {
+    open: string;
+    close: string;
+    isClosed?: boolean;
+  };
+}
+
 interface Guide {
   name: string;
   avatar?: string;
@@ -27,6 +35,7 @@ interface Guide {
   reviews: number;
   experience: string;
   languages: string[];
+  openingHours?: OpeningHours;
 }
 
 interface Attraction {
@@ -88,17 +97,29 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
   const [intakeSubmissionId, setIntakeSubmissionId] = useState<number | null>(null);
   const [showIntakePayment, setShowIntakePayment] = useState(false);
 
+  // Default opening hours for guides
+  const defaultOpeningHours: OpeningHours = {
+    monday: { open: "9:00 AM", close: "6:00 PM" },
+    tuesday: { open: "9:00 AM", close: "6:00 PM" },
+    wednesday: { open: "9:00 AM", close: "6:00 PM" },
+    thursday: { open: "9:00 AM", close: "6:00 PM" },
+    friday: { open: "9:00 AM", close: "6:00 PM" },
+    saturday: { open: "10:00 AM", close: "4:00 PM" },
+    sunday: { open: "10:00 AM", close: "2:00 PM" }
+  };
+
   useEffect(() => {
     const fetchUserAndBookings = async () => {
       try {
         const token = localStorage.getItem('token');
         
+        // If you don't use user data, you can remove this call safely
         const userRes = await fetch('http://127.0.0.1:8000/api/auth/user', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
-        const userData = await userRes.json();
+        await userRes.json();
 
         const bookingsRes = await fetch('http://127.0.0.1:8000/api/auth/attraction/bookings', {
           headers: {
@@ -178,6 +199,14 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
       'Local traditions and customs',
       'Authentic cultural experience'
     ];
+  };
+
+  const getOpeningHours = (guide?: Guide): OpeningHours => {
+    return guide?.openingHours || defaultOpeningHours;
+  };
+
+  const formatDayName = (day: string): string => {
+    return day.charAt(0).toUpperCase() + day.slice(1);
   };
 
   const handleBookNow = async (attraction: Attraction) => {
@@ -310,112 +339,136 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
             <h2 className="text-xl font-semibold">Attractions & Activities</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredAttractions.map((attraction, index) => (
-              <div key={index} className="bg-gray-50 rounded-lg p-4">
-                <img
-                  src={getImageUrl(attraction.image)}
-                  alt={attraction.name}
-                  className="w-full h-48 object-cover rounded-lg mb-4"
-                />
-                <h3 className="font-semibold text-lg mb-2">{attraction.name}</h3>
-                <p className="text-gray-600">{attraction.type}</p>
-                <div className="flex items-center text-gray-500 mt-2">
-                  <Clock className="h-4 w-4 mr-1" />
-                  <span>{attraction.duration}</span>
-                </div>
-                {visitType === 'group' && attraction.minGroupSize && attraction.maxGroupSize && (
-                  <div className="flex items-center text-gray-500 mt-1">
-                    <Users className="h-4 w-4 mr-1" />
-                    <span>{attraction.minGroupSize}-{attraction.maxGroupSize} people</span>
+            {filteredAttractions.map((attraction, index) => {
+              const openingHours = getOpeningHours(attraction.guide);
+              
+              return (
+                <div key={index} className="bg-gray-50 rounded-lg p-4">
+                  <img
+                    src={getImageUrl(attraction.image)}
+                    alt={attraction.name}
+                    className="w-full h-48 object-cover rounded-lg mb-4"
+                  />
+                  <h3 className="font-semibold text-lg mb-2">{attraction.name}</h3>
+                  <p className="text-gray-600">{attraction.type}</p>
+                  <div className="flex items-center text-gray-500 mt-2">
+                    <Clock className="h-4 w-4 mr-1" />
+                    <span>{attraction.duration}</span>
                   </div>
-                )}
-                {attraction.guide && (
-                  <div className="mt-2 p-2 bg-purple-50 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      {attraction.guide.avatar ? (
-                        <img 
-                          src={getImageUrl(attraction.guide.avatar)} 
-                          alt={attraction.guide.name}
-                          className="w-8 h-8 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                          <span className="text-purple-600 font-medium">
-                            {attraction.guide.name.charAt(0)}
-                          </span>
+                  {visitType === 'group' && attraction.minGroupSize && attraction.maxGroupSize && (
+                    <div className="flex items-center text-gray-500 mt-1">
+                      <Users className="h-4 w-4 mr-1" />
+                      <span>{attraction.minGroupSize}-{attraction.maxGroupSize} people</span>
+                    </div>
+                  )}
+                  {attraction.guide && (
+                    <div className="mt-2 p-2 bg-purple-50 rounded-lg">
+                      {/* 
+                      // --- Temporarily hidden: guide avatar, initials, name, rating, reviews ---
+                      <div className="flex items-center space-x-2">
+                        {attraction.guide.avatar ? (
+                          <img 
+                            src={getImageUrl(attraction.guide.avatar)} 
+                            alt={attraction.guide.name}
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                            <span className="text-purple-600 font-medium">
+                              {attraction.guide.name.charAt(0)}
+                            </span>
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-sm font-medium">{attraction.guide.name}</p>
+                          <div className="flex items-center text-xs text-gray-500">
+                            <span className="text-yellow-500 mr-1">★</span>
+                            {attraction.guide.rating} ({attraction.guide.reviews} reviews)
+                          </div>
                         </div>
-                      )}
-                      <div>
-                        <p className="text-sm font-medium">{attraction.guide.name}</p>
-                        <div className="flex items-center text-xs text-gray-500">
-                          <span className="text-yellow-500 mr-1">★</span>
-                          {attraction.guide.rating} ({attraction.guide.reviews} reviews)
+                      </div>
+                      */}
+
+                      <div className="mt-2 text-xs text-gray-600">
+                        {/* Opening Hours Section */}
+                        <div className="mt-2">
+                          <p className="font-medium mb-1">Opening Hours:</p>
+                          <div className="space-y-1">
+                            {Object.entries(openingHours).map(([day, hours]) => (
+                              <div key={day} className="flex justify-between">
+                                <span className="capitalize">{formatDayName(day)}:</span>
+                                <span>
+                                  {hours.isClosed ? (
+                                    <span className="text-red-500">Closed</span>
+                                  ) : (
+                                    `${hours.open} - ${hours.close}`
+                                  )}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>
-                    <div className="mt-2 text-xs text-gray-600">
-                      <p>Experience: {attraction.guide.experience}</p>
-                      <p>Languages: {attraction.guide.languages.join(', ')}</p>
-                    </div>
-                  </div>
-                )}
-
-                <div className="mt-4 p-3 bg-purple-50 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Star className="h-4 w-4 text-purple-600" />
-                    <h4 className="font-medium text-purple-900">Cultural & Historical Highlights</h4>
-                  </div>
-                  <ul className="space-y-1">
-                    {(attraction.highlights || getDefaultHighlights(attraction.name, attraction.type)).map((highlight, idx) => (
-                      <li key={idx} className="flex items-center gap-2 text-sm text-purple-700">
-                        <Check className="h-4 w-4 text-purple-600 flex-shrink-0" />
-                        <span>{highlight}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="flex items-center justify-between mt-4">
-                  <span className="text-purple-600 font-semibold">
-                    {visitType === 'group' && attraction.groupPrice && groupSize >= minGroupSize
-                      ? `€${(attraction.groupPrice * groupSize).toFixed(2)} `
-                      : `€${attraction.price.toFixed(2)}`}
-                    {visitType === 'group' && attraction.groupPrice && groupSize >= minGroupSize && (
-                      <span className="text-sm text-gray-500"> (€${attraction.groupPrice} per person)</span>
-                    )}
-                  </span>
-                  {bookedAttractionIds.includes(attraction.id) ? (
-                    <button
-                      onClick={() => {
-                        const booked = attractions.find(a => a.id === attraction.id);
-                        setBookingDetails({
-                          attraction: booked!,
-                          status: 'paid',
-                          participants: groupSize || 1,
-                          booking_date: new Date().toISOString(),
-                        });
-                        setShowBookingModal(true);
-                      }}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                    >
-                      View Booking
-                    </button>
-                  ) : (
-                    <button 
-                      onClick={() => handleBookNow(attraction)}
-                      className={`px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 ${
-                        visitType === 'group' && (!groupSize || groupSize < minGroupSize || groupSize > maxGroupSize)
-                          ? 'opacity-50 cursor-not-allowed'
-                          : ''
-                      }`}
-                      disabled={visitType === 'group' && (!groupSize || groupSize < minGroupSize || groupSize > maxGroupSize)}
-                    >
-                      Book Now
-                    </button>
                   )}
+
+                  <div className="mt-4 p-3 bg-purple-50 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Star className="h-4 w-4 text-purple-600" />
+                      <h4 className="font-medium text-purple-900">Cultural & Historical Highlights</h4>
+                    </div>
+                    <ul className="space-y-1">
+                      {(attraction.highlights || getDefaultHighlights(attraction.name, attraction.type)).map((highlight, idx) => (
+                        <li key={idx} className="flex items-center gap-2 text-sm text-purple-700">
+                          <Check className="h-4 w-4 text-purple-600 flex-shrink-0" />
+                          <span>{highlight}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="flex items-center justify-between mt-4">
+                    <span className="text-purple-600 font-semibold">
+                      {visitType === 'group' && attraction.groupPrice && groupSize >= minGroupSize
+                        ? `€${(attraction.groupPrice * groupSize).toFixed(2)} `
+                        : `€${attraction.price.toFixed(2)}`}
+                      {visitType === 'group' && attraction.groupPrice && groupSize >= minGroupSize && (
+                        <span className="text-sm text-gray-500"> (€{attraction.groupPrice} per person)</span>
+                      )}
+                    </span>
+                    {bookedAttractionIds.includes(attraction.id) ? (
+                      <button
+                        onClick={() => {
+                          const booked = attractions.find(a => a.id === attraction.id);
+                          setBookingDetails({
+                            attraction: booked!,
+                            status: 'paid',
+                            participants: groupSize || 1,
+                            booking_date: new Date().toISOString(),
+                          });
+                          setShowBookingModal(true);
+                        }}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                      >
+                        View Booking
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => handleBookNow(attraction)}
+                        className={`px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 ${
+                          visitType === 'group' && (!groupSize || groupSize < minGroupSize || groupSize > maxGroupSize)
+                            ? 'opacity-50 cursor-not-allowed'
+                            : ''
+                        }`}
+                        disabled={visitType === 'group' && (!groupSize || groupSize < minGroupSize || groupSize > maxGroupSize)}
+                      >
+                        Book Now
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ) : (
@@ -480,6 +533,9 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
               <p><strong>Status:</strong> <span className="text-green-600">Paid</span></p>
               <p><strong>Participants:</strong> {bookingDetails.participants}</p>
               <p><strong>Booking Date:</strong> {new Date(bookingDetails.booking_date).toLocaleString()}</p>
+
+              {/*
+              // --- Temporarily hidden: guide section in booking modal ---
               {bookingDetails.attraction.guide && (
                 <div className="mt-3 pt-3 border-t">
                   <p className="font-medium">Your Guide:</p>
@@ -507,6 +563,7 @@ const DestinationDetails: React.FC<DestinationDetailsProps> = ({
                   </div>
                 </div>
               )}
+              */}
             </div>
           </div>
         </div>
