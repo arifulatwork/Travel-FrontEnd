@@ -6,6 +6,7 @@ import DestinationDetails from './DestinationDetails';
 import LocalTouchSection from './LocalTouchSection';
 import BalkanTripsSection from './trips/BalkanTripsSection';
 import InternshipMarketplace from './trips/InternshipMarketplace';
+import TrainingCentre from './trips/TrainingCentre';
 import MontenegroTripsSection from './trips/MontenegroTripsSection';
 import PetraTripsSection from './trips/PetraTripsSection';
 import ShortTripsSection from './trips/ShortTripsSection';
@@ -290,6 +291,18 @@ const ExploreSection: React.FC<ExploreProps> = () => {
         Internship
       </button>
 
+      <button
+            onClick={() => setActiveSection('training')}
+            className={`px-4 py-2 font-medium flex items-center gap-2 whitespace-nowrap ${
+              activeSection === 'training'
+                ? 'text-purple-600 border-b-2 border-purple-600'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Plane className="h-4 w-4" />
+            Training
+          </button>
+
           
           <button
             onClick={() => setActiveSection('balkan-trips')}
@@ -361,7 +374,8 @@ const ExploreSection: React.FC<ExploreProps> = () => {
         <PetraTripsSection />
         ) : activeSection === 'intern-tours' ? (
         <InternshipMarketplace />
-      ) : null}
+      ) : activeSection === 'training' ? (
+        <TrainingCentre />) : null}
     </div>
   );
 };
