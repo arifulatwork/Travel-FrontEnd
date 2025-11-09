@@ -10,12 +10,14 @@ import MontenegroTripBookingDetailsModal from './montenegro/MontenegroTripBookin
 const BASE_URL = 'http://127.0.0.1:8000';
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_...');
 
-interface MontenegroTrip {
+interface Tour {
   id: number;
   slug: string;
   title: string;
   description: string;
+  /** backend returns string duration (mapped from duration_days) */
   duration: string;
+  /** backend returns price as number (mapped from base_price) */
   price: number;
   image_url: string;
   destinations: string[];
@@ -24,8 +26,8 @@ interface MontenegroTrip {
     day: number;
     title: string;
     description: string;
-    meals: string[];
-    accommodation: string;
+    meals?: string[];
+    accommodation?: string;
   }[];
   included: string[];
   not_included: string[];
@@ -34,15 +36,13 @@ interface MontenegroTrip {
 // Helper to get full image URL including storage path if missing
 const getFullImageUrl = (url: string) => {
   if (!url) return '';
-  // If url already contains http or https, return as is
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  // Otherwise, prefix with BASE_URL + /storage/
   return `${BASE_URL}/storage/${url.replace(/^\/?storage\/?/, '')}`;
 };
 
 const MontenegroTripsSection: React.FC = () => {
-  const [trips, setTrips] = useState<MontenegroTrip[]>([]);
-  const [selectedTrip, setSelectedTrip] = useState<MontenegroTrip | null>(null);
+  const [trips, setTrips] = useState<Tour[]>([]);
+  const [selectedTrip, setSelectedTrip] = useState<Tour | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -52,33 +52,30 @@ const MontenegroTripsSection: React.FC = () => {
 
   const fetchBookings = async () => {
     try {
-      const res = await fetch(`${BASE_URL}/api/auth/montenegro-trip/my-bookings`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        }
+      const res = await fetch(`${BASE_URL}/api/auth/tour/my-bookings`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       const data = await res.json();
       if (Array.isArray(data)) {
         setBookedTripIds(data);
       }
-    } catch (error) {
-      console.warn('Could not fetch booked trip IDs (unauthenticated?)');
+    } catch {
+      console.warn('Could not fetch booked tour IDs (unauthenticated?)');
     }
   };
 
   useEffect(() => {
-    fetch(`${BASE_URL}/api/montenegro-trips`)
-      .then(res => res.json())
-      .then(data => {
+    fetch(`${BASE_URL}/api/tours?category=montenegro`)
+      .then((res) => res.json())
+      .then((data: Tour[]) => {
         setTrips(data);
         setLoading(false);
       })
-      .catch(err => {
-        console.error('Failed to fetch montenegro trips', err);
+      .catch((err) => {
+        console.error('Failed to fetch tours (montenegro)', err);
         setLoading(false);
       });
 
-    // Fetch user bookings
     fetchBookings();
   }, []);
 
@@ -86,21 +83,23 @@ const MontenegroTripsSection: React.FC = () => {
     if (!selectedTrip) return;
 
     try {
-      const res = await fetch(`${BASE_URL}/api/auth/montenegro-trip/book`, {
+      const res = await fetch(`${BASE_URL}/api/auth/tour/book`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify({ montenegro_trip_id: selectedTrip.id })
+        body: JSON.stringify({ tour_id: selectedTrip.id }),
       });
 
       const data = await res.json();
 
-      if (data.client_secret) {
+      if (data?.client_secret) {
         setClientSecret(data.client_secret);
         setBookingId(data.booking_id);
         setShowPaymentModal(true);
+      } else if (data?.already_booked) {
+        alert('You have already booked this tour.');
       } else {
         alert('Failed to create booking. Please try again.');
       }
@@ -116,7 +115,7 @@ const MontenegroTripsSection: React.FC = () => {
 
   if (selectedTrip) {
     const isBooked = bookedTripIds.includes(selectedTrip.id);
-    
+
     return (
       <div className="p-4">
         <button
@@ -125,6 +124,7 @@ const MontenegroTripsSection: React.FC = () => {
         >
           ← Back to All Trips
         </button>
+
         <TripDetails
           title={selectedTrip.title}
           description={selectedTrip.description}
@@ -138,13 +138,17 @@ const MontenegroTripsSection: React.FC = () => {
               {
                 time: '',
                 activity: item.title,
-                description: `${item.description}\nMeals: ${item.meals.join(', ')}\nStay: ${item.accommodation}`
-              }
-            ]
+                description: `${item.description}${
+                  item.meals?.length ? `\nMeals: ${item.meals.join(', ')}` : ''
+                }${item.accommodation ? `\nStay: ${item.accommodation}` : ''}`,
+              },
+            ],
           }))}
           included={selectedTrip.included}
           onBook={handleBook}
           isBooked={isBooked}
+          // NOTE: This still passes trip.id to your modal.
+          // If your modal expects a *booking id*, adapt the modal or fetch the booking id first.
           onViewDetails={() => setViewBookingId(selectedTrip.id)}
         />
 
@@ -157,8 +161,7 @@ const MontenegroTripsSection: React.FC = () => {
                 setShowPaymentModal(false);
                 setClientSecret(null);
                 setBookingId(null);
-                // Refresh bookings after payment
-                fetchBookings();
+                fetchBookings(); // refresh after payment
               }}
             />
           </Elements>
@@ -202,7 +205,7 @@ const MontenegroTripsSection: React.FC = () => {
               highlights={trip.itinerary.slice(0, 2).map((i) => ({
                 time: '',
                 activity: i.title,
-                description: i.description
+                description: i.description,
               }))}
               onClick={() => setSelectedTrip(trip)}
               isBooked={isBooked}

@@ -1,18 +1,15 @@
 import React, { useState } from 'react';
 import { Plane, MapPin, Calendar, Users, ArrowRight } from 'lucide-react';
-import MontenegroTripsSection from './MontenegroTripsSection';
-import PetraTripsSection from './PetraTripsSection';
-import BalkanTripsSection from './BalkanTripsSection';
+import ToursSection from './ToursSection';
 
 interface TripCategory {
-  id: string;
+  id: string;            // 'montenegro' | 'balkan' | 'spain' | etc.
   title: string;
   description: string;
   image: string;
   duration: string;
   priceRange: string;
   destinations: string[];
-  section: React.ComponentType;
 }
 
 const TripSection: React.FC = () => {
@@ -27,7 +24,6 @@ const TripSection: React.FC = () => {
       duration: '5-10 days',
       priceRange: '€800 - €2000',
       destinations: ['Montenegro', 'Croatia', 'Bosnia', 'Albania'],
-      section: MontenegroTripsSection
     },
     {
       id: 'balkan',
@@ -37,7 +33,6 @@ const TripSection: React.FC = () => {
       duration: '7-14 days',
       priceRange: '€1000 - €2500',
       destinations: ['Serbia', 'Croatia', 'Bosnia', 'Montenegro', 'Albania'],
-      section: BalkanTripsSection
     },
     {
       id: 'spain',
@@ -47,14 +42,13 @@ const TripSection: React.FC = () => {
       duration: '4-12 days',
       priceRange: '€600 - €1800',
       destinations: ['Barcelona', 'Madrid', 'Seville', 'Valencia', 'Costa del Sol'],
-      section: PetraTripsSection
-    }
+    },
   ];
 
+  // If a category is selected, render the generic ToursSection for that category
   if (selectedCategory) {
-    const category = tripCategories.find(cat => cat.id === selectedCategory);
-    if (category) {
-      const CategoryComponent = category.section;
+    const cat = tripCategories.find((c) => c.id === selectedCategory);
+    if (cat) {
       return (
         <div className="p-4">
           <button
@@ -63,12 +57,13 @@ const TripSection: React.FC = () => {
           >
             ← Back to All Trips
           </button>
-          <CategoryComponent />
+          <ToursSection category={cat.id} title={cat.title} />
         </div>
       );
     }
   }
 
+  // Default view: show all categories as cards
   return (
     <div className="p-4">
       <div className="mb-8">
@@ -94,18 +89,18 @@ const TripSection: React.FC = () => {
                 alt={category.title}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />
-              <div className="absolute inset-0 bg-black bg-opacity-20 group-hover:bg-opacity-10 transition-all duration-300" />
+              <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-all duration-300" />
             </div>
-            
+
             <div className="p-6">
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3 group-hover:text-purple-600 transition-colors duration-300">
                 {category.title}
               </h3>
-              
+
               <p className="text-gray-600 dark:text-gray-300 mb-4 line-clamp-2">
                 {category.description}
               </p>
-              
+
               <div className="space-y-2 mb-4">
                 <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                   <Calendar className="h-4 w-4" />
@@ -120,7 +115,7 @@ const TripSection: React.FC = () => {
                   <span className="line-clamp-1">{category.destinations.join(', ')}</span>
                 </div>
               </div>
-              
+
               <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
                 <span className="text-purple-600 font-semibold">View Tours</span>
                 <ArrowRight className="h-5 w-5 text-purple-600 transform group-hover:translate-x-1 transition-transform duration-300" />
@@ -136,7 +131,7 @@ const TripSection: React.FC = () => {
           Can't Find What You're Looking For?
         </h3>
         <p className="text-gray-600 dark:text-gray-300 mb-4 max-w-2xl mx-auto">
-          We specialize in creating custom itineraries tailored to your preferences. 
+          We specialize in creating custom itineraries tailored to your preferences.
           Contact us to design your perfect trip.
         </p>
         <button className="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors duration-300">
