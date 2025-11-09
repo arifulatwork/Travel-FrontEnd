@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Search, DollarSign, User, Users, ArrowLeft, Coffee,Laptop, Music, Utensils, Palette, Search as SearchIcon, X, Calendar, Info, Check, CreditCard, ChevronDown, Sun, Moon, Plane, AlertCircle } from 'lucide-react';
+import { Search, DollarSign, User, Users, ArrowLeft, Coffee, Laptop, Music, Utensils, Palette, Search as SearchIcon, X, Calendar, Info, Check, CreditCard, ChevronDown, Sun, Moon, Plane, AlertCircle } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import DestinationCard from './DestinationCard';
 import DestinationDetails from './DestinationDetails';
 import LocalTouchSection from './LocalTouchSection';
-import BalkanTripsSection from './trips/BalkanTripsSection';
+import TripSection from './trips/TripSection';
 import InternshipMarketplace from './trips/InternshipMarketplace';
 import TrainingCentre from './trips/TrainingCentre';
-import MontenegroTripsSection from './trips/MontenegroTripsSection';
-import PetraTripsSection from './trips/PetraTripsSection';
 import ShortTripsSection from './trips/ShortTripsSection';
 import { destinationApi } from '../lib/destinations';
 
@@ -22,6 +20,7 @@ const TRANSLATIONS = {
     group: 'Group',
     backToDestinations: 'Back to Destinations',
     shortTrips: 'Short Trips & Excursions',
+    trips: 'All Trips & Tours',
     dayTrips: 'Day Trips',
     weekendEscapes: 'Weekend Escapes',
     afternoonTrips: 'Afternoon Trips',
@@ -30,13 +29,55 @@ const TRANSLATIONS = {
     fourDayTrips: 'Four-Day Trips'
   },
   es: {
-    // ... Spanish translations
+    exploreDestinations: 'Explorar Destinos',
+    findNextAdventure: 'Encuentra tu próxima aventura',
+    searchPlaceholder: 'Buscar destinos o experiencias...',
+    maxPrice: 'Precio máximo',
+    individual: 'Individual',
+    group: 'Grupo',
+    backToDestinations: 'Volver a Destinos',
+    shortTrips: 'Viajes Cortos y Excursiones',
+    trips: 'Todos los Viajes y Tours',
+    dayTrips: 'Viajes de un Día',
+    weekendEscapes: 'Escapadas de Fin de Semana',
+    afternoonTrips: 'Viajes de Tarde',
+    twoDayTrips: 'Viajes de Dos Días',
+    threeDayTrips: 'Viajes de Tres Días',
+    fourDayTrips: 'Viajes de Cuatro Días'
   },
   fr: {
-    // ... French translations  
+    exploreDestinations: 'Explorer les Destinations',
+    findNextAdventure: 'Trouvez votre prochaine aventure',
+    searchPlaceholder: 'Rechercher des destinations ou expériences...',
+    maxPrice: 'Prix maximum',
+    individual: 'Individuel',
+    group: 'Groupe',
+    backToDestinations: 'Retour aux Destinations',
+    shortTrips: 'Excursions et Voyages Courts',
+    trips: 'Tous les Voyages et Tours',
+    dayTrips: 'Excursions d\'une Journée',
+    weekendEscapes: 'Escapades de Week-end',
+    afternoonTrips: 'Excursions de l\'Après-midi',
+    twoDayTrips: 'Voyages de Deux Jours',
+    threeDayTrips: 'Voyages de Trois Jours',
+    fourDayTrips: 'Voyages de Quatre Jours'
   },
   de: {
-    // ... German translations
+    exploreDestinations: 'Destinationen Entdecken',
+    findNextAdventure: 'Finde dein nächstes Abenteuer',
+    searchPlaceholder: 'Nach Destinationen oder Erlebnissen suchen...',
+    maxPrice: 'Maximalpreis',
+    individual: 'Einzeln',
+    group: 'Gruppe',
+    backToDestinations: 'Zurück zu Destinationen',
+    shortTrips: 'Kurztrips & Ausflüge',
+    trips: 'Alle Reisen & Touren',
+    dayTrips: 'Tagesausflüge',
+    weekendEscapes: 'Wochenendtrips',
+    afternoonTrips: 'Nachmittagsausflüge',
+    twoDayTrips: 'Zweitägige Reisen',
+    threeDayTrips: 'Dreitägige Reisen',
+    fourDayTrips: 'Viertägige Reisen'
   }
 };
 
@@ -68,7 +109,7 @@ const ExploreSection: React.FC<ExploreProps> = () => {
   const [selectedDestination, setSelectedDestination] = useState<string | null>(null);
   const [selectedDestinationDetails, setSelectedDestinationDetails] = useState<DestinationDetailsData | null>(null);
   const [visitType, setVisitType] = useState<'individual' | 'group'>('individual');
-  const [activeSection, setActiveSection] = useState<'short-trips' | 'destinations' | 'local' | 'intern-tours'| 'balkan-trips' | 'montenegro-tours' | 'petra-tours'>('destinations');
+  const [activeSection, setActiveSection] = useState<'short-trips' | 'destinations' | 'local' | 'intern-tours' | 'training' | 'trips'>('destinations');
   const [selectedTripType, setSelectedTripType] = useState<string | null>(null);
   const [destinations, setDestinations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -253,7 +294,7 @@ const ExploreSection: React.FC<ExploreProps> = () => {
             className={`px-4 py-2 font-medium whitespace-nowrap ${
               activeSection === 'short-trips'
                 ? 'text-purple-600 border-b-2 border-purple-600'
-                : 'text-gray-600 hover:text-gray-900'
+                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
             }`}
           >
             {t.shortTrips}
@@ -263,7 +304,7 @@ const ExploreSection: React.FC<ExploreProps> = () => {
             className={`px-4 py-2 font-medium whitespace-nowrap ${
               activeSection === 'destinations'
                 ? 'text-purple-600 border-b-2 border-purple-600'
-                : 'text-gray-600 hover:text-gray-900'
+                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
             }`}
           >
             Destinations
@@ -273,69 +314,44 @@ const ExploreSection: React.FC<ExploreProps> = () => {
             className={`px-4 py-2 font-medium flex items-center gap-2 whitespace-nowrap ${
               activeSection === 'local'
                 ? 'text-purple-600 border-b-2 border-purple-600'
-                : 'text-gray-600 hover:text-gray-900'
+                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
             }`}
           >
             <Coffee className="h-4 w-4" />
             Local Touch
           </button>
           <button
-          onClick={() => setActiveSection('intern-tours')}
-          className={`px-4 py-2 font-medium flex items-center gap-2 whitespace-nowrap ${
-          activeSection === 'intern-tours'
-          ? 'text-purple-600 border-b-2 border-purple-600'
-          : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-        <Laptop className="h-4 w-4" />
-        Internship
-      </button>
-
-      <button
+            onClick={() => setActiveSection('trips')}
+            className={`px-4 py-2 font-medium flex items-center gap-2 whitespace-nowrap ${
+              activeSection === 'trips'
+                ? 'text-purple-600 border-b-2 border-purple-600'
+                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
+            }`}
+          >
+            <Plane className="h-4 w-4" />
+            {t.trips}
+          </button>
+          <button
+            onClick={() => setActiveSection('intern-tours')}
+            className={`px-4 py-2 font-medium flex items-center gap-2 whitespace-nowrap ${
+              activeSection === 'intern-tours'
+                ? 'text-purple-600 border-b-2 border-purple-600'
+                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
+            }`}
+          >
+            <Laptop className="h-4 w-4" />
+            Internship
+          </button>
+          <button
             onClick={() => setActiveSection('training')}
             className={`px-4 py-2 font-medium flex items-center gap-2 whitespace-nowrap ${
               activeSection === 'training'
                 ? 'text-purple-600 border-b-2 border-purple-600'
-                : 'text-gray-600 hover:text-gray-900'
+                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
             }`}
           >
             <Plane className="h-4 w-4" />
             Training
-          </button>
-
-          
-          <button
-            onClick={() => setActiveSection('balkan-trips')}
-            className={`px-4 py-2 font-medium flex items-center gap-2 whitespace-nowrap ${
-              activeSection === 'balkan-trips'
-                ? 'text-purple-600 border-b-2 border-purple-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <Plane className="h-4 w-4" />
-            Balkan Adventures
-          </button>
-          <button
-            onClick={() => setActiveSection('montenegro-tours')}
-            className={`px-4 py-2 font-medium flex items-center gap-2 whitespace-nowrap ${
-              activeSection === 'montenegro-tours'
-                ? 'text-purple-600 border-b-2 border-purple-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <Plane className="h-4 w-4" />
-            Montenegro Tours
-          </button>
-          <button
-            onClick={() => setActiveSection('petra-tours')}
-            className={`px-4 py-2 font-medium flex items-center gap-2 whitespace-nowrap ${
-              activeSection === 'petra-tours'
-                ? 'text-purple-600 border-b-2 border-purple-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <Plane className="h-4 w-4" />
-            Spain Tours
           </button>
         </div>
       </div>
@@ -366,16 +382,13 @@ const ExploreSection: React.FC<ExploreProps> = () => {
         </div>
       ) : activeSection === 'local' ? (
         <LocalTouchSection />
-      ) : activeSection === 'balkan-trips' ? (
-        <BalkanTripsSection />
-      ) : activeSection === 'montenegro-tours' ? (
-        <MontenegroTripsSection />
-      ) : activeSection === 'petra-tours' ? (
-        <PetraTripsSection />
-        ) : activeSection === 'intern-tours' ? (
+      ) : activeSection === 'trips' ? (
+        <TripSection />
+      ) : activeSection === 'intern-tours' ? (
         <InternshipMarketplace />
       ) : activeSection === 'training' ? (
-        <TrainingCentre />) : null}
+        <TrainingCentre />
+      ) : null}
     </div>
   );
 };
