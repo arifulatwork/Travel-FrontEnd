@@ -51,12 +51,79 @@ const InternshipMarketplace: React.FC = () => {
     endDate: ''
   });
   const [isProcessing, setIsProcessing] = useState(false);
+  const [dateError, setDateError] = useState<string>('');
 
   const [locations, setLocations] = useState<InternshipLocation[]>([]);
   const [fields, setFields] = useState<InternshipField[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Calculate minimum and maximum dates
+  const getMinStartDate = () => {
+    const today = new Date();
+    today.setDate(today.getDate() + 30); // 30 days from today
+    return today.toISOString().split('T')[0];
+  };
+
+  const getMaxStartDate = () => {
+    const today = new Date();
+    today.setFullYear(today.getFullYear() + 1); // 1 year from today
+    return today.toISOString().split('T')[0];
+  };
+
+  const calculateEndDate = (startDate: string, durationMonths: number) => {
+    const start = new Date(startDate);
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + durationMonths);
+    return end.toISOString().split('T')[0];
+  };
+
+  const validateDates = (startDate: string, endDate: string): string => {
+    if (!startDate || !endDate) return '';
+    
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const today = new Date();
+    
+    // Check if start date is in the future
+    if (start <= today) {
+      return 'Start date must be at least 30 days from today';
+    }
+    
+    // Calculate duration in months
+    const monthsDiff = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+    
+    if (monthsDiff < 3) {
+      return 'Internship duration must be at least 3 months';
+    }
+    
+    if (monthsDiff > 12) {
+      return 'Internship duration cannot exceed 12 months';
+    }
+    
+    return '';
+  };
+
+  const handleStartDateChange = (startDate: string) => {
+    setSelectedDates(prev => ({ ...prev, startDate }));
+    
+    if (startDate) {
+      // Auto-set end date to minimum 3 months
+      const minEndDate = calculateEndDate(startDate, 3);
+      setSelectedDates(prev => ({ ...prev, endDate: minEndDate }));
+    }
+  };
+
+  const handleEndDateChange = (endDate: string) => {
+    setSelectedDates(prev => ({ ...prev, endDate }));
+    
+    // Validate dates whenever end date changes
+    if (selectedDates.startDate && endDate) {
+      const error = validateDates(selectedDates.startDate, endDate);
+      setDateError(error);
+    }
+  };
 
   // Mock data - replace with actual API calls
   useEffect(() => {
@@ -248,12 +315,25 @@ const InternshipMarketplace: React.FC = () => {
   };
 
   const handlePayment = async () => {
+    // Validate dates before processing payment
+    const error = validateDates(selectedDates.startDate, selectedDates.endDate);
+    if (error) {
+      setDateError(error);
+      return;
+    }
+
     setIsProcessing(true);
     // Simulate payment processing
     await new Promise(resolve => setTimeout(resolve, 2000));
     setIsProcessing(false);
     setShowPaymentModal(false);
-    alert('Application submitted successfully! Our team will contact you shortly.');
+    
+    // Show success message with internship details
+    const start = new Date(selectedDates.startDate);
+    const end = new Date(selectedDates.endDate);
+    const monthsDiff = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+    
+    alert(`Application submitted successfully!\n\nInternship Details:\n- Duration: ${monthsDiff} months\n- Start Date: ${start.toLocaleDateString()}\n- End Date: ${end.toLocaleDateString()}\n\nOur team will contact you shortly.`);
   };
 
   const filteredCompanies = companies.filter(company => {
@@ -262,6 +342,17 @@ const InternshipMarketplace: React.FC = () => {
     const fieldMatch = selectedField === 'all' || company.field === selectedField;
     return locationMatch && fieldMatch;
   });
+
+  // Calculate duration for display
+  const getDurationText = () => {
+    if (!selectedDates.startDate || !selectedDates.endDate) return '';
+    
+    const start = new Date(selectedDates.startDate);
+    const end = new Date(selectedDates.endDate);
+    const monthsDiff = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+    
+    return `${monthsDiff} month${monthsDiff !== 1 ? 's' : ''}`;
+  };
 
   if (error) {
     return (
@@ -323,7 +414,7 @@ const InternshipMarketplace: React.FC = () => {
           </div>
           <h3 className="font-semibold text-lg mb-2">Duration</h3>
           <p className="text-gray-600">
-            We offer you an internship of the duration of your choice, starting from only 4 weeks 
+            We offer you an internship of the duration of your choice, starting from only 3 months 
             and lasting for up to 12 months according to your requirements.
           </p>
         </div>
@@ -655,24 +746,46 @@ const InternshipMarketplace: React.FC = () => {
             <div className="space-y-4 mb-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Internship Duration
+                  Internship Duration (3-12 months)
                 </label>
-                <div className="grid grid-cols-2 gap-4">
-                  <input
-                    type="date"
-                    value={selectedDates.startDate}
-                    onChange={(e) => setSelectedDates(prev => ({ ...prev, startDate: e.target.value }))}
-                    className="border border-gray-300 rounded-lg px-3 py-2 w-full"
-                    placeholder="Start date"
-                  />
-                  <input
-                    type="date"
-                    value={selectedDates.endDate}
-                    onChange={(e) => setSelectedDates(prev => ({ ...prev, endDate: e.target.value }))}
-                    className="border border-gray-300 rounded-lg px-3 py-2 w-full"
-                    placeholder="End date"
-                  />
+                <div className="grid grid-cols-2 gap-4 mb-2">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Start Date</label>
+                    <input
+                      type="date"
+                      value={selectedDates.startDate}
+                      onChange={(e) => handleStartDateChange(e.target.value)}
+                      min={getMinStartDate()}
+                      max={getMaxStartDate()}
+                      className="border border-gray-300 rounded-lg px-3 py-2 w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">End Date</label>
+                    <input
+                      type="date"
+                      value={selectedDates.endDate}
+                      onChange={(e) => handleEndDateChange(e.target.value)}
+                      min={selectedDates.startDate ? calculateEndDate(selectedDates.startDate, 3) : ''}
+                      max={selectedDates.startDate ? calculateEndDate(selectedDates.startDate, 12) : ''}
+                      className="border border-gray-300 rounded-lg px-3 py-2 w-full"
+                    />
+                  </div>
                 </div>
+                
+                {selectedDates.startDate && selectedDates.endDate && (
+                  <div className="text-center">
+                    <span className="text-sm font-medium text-purple-600">
+                      Duration: {getDurationText()}
+                    </span>
+                  </div>
+                )}
+                
+                {dateError && (
+                  <div className="text-red-600 text-sm mt-2 text-center">
+                    {dateError}
+                  </div>
+                )}
               </div>
 
               <div className="bg-gray-50 rounded-lg p-4">
@@ -688,7 +801,7 @@ const InternshipMarketplace: React.FC = () => {
 
             <button
               onClick={handlePayment}
-              disabled={isProcessing || !selectedDates.startDate || !selectedDates.endDate}
+              disabled={isProcessing || !selectedDates.startDate || !selectedDates.endDate || !!dateError}
               className="w-full flex items-center justify-center gap-2 bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors disabled:bg-gray-400"
             >
               {isProcessing ? (
