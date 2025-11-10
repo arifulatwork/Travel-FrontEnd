@@ -31,13 +31,14 @@ interface Props {
 }
 
 /* -------------------------- Helper -------------------------- */
+// ✅ Serve public disk uploads from /storage/... (after `php artisan storage:link`)
 const getFullImageUrl = (url: string) => {
   if (!url) return '';
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  // If your images are in public/tours/..., this will serve them
-  return `${BASE_URL}/${url.replace(/^\/+/, '')}`;
-  // If you store under storage/app/public, use:
-  // return `${BASE_URL}/storage/${url.replace(/^\/?storage\/?/, '')}`;
+
+  const cleaned = url.replace(/^\/+/, ''); // remove leading slashes
+  const path = cleaned.startsWith('storage/') ? cleaned : `storage/${cleaned}`;
+  return `${BASE_URL}/${path}`;
 };
 
 /* --------------------- Generic Payment Modal (responsive) --------------------- */
@@ -89,7 +90,7 @@ const GenericTourPaymentModal: React.FC<{
       setError(error.message || 'Payment failed');
     } else if (paymentIntent && paymentIntent.status === 'succeeded') {
       setSuccess(true);
-      // (Optional) let backend know too (webhook should also handle it)
+      // (Optional) Let backend know too (webhook should also handle it)
       fetch(`${BASE_URL}/api/auth/tour/confirm`, {
         method: 'POST',
         headers: {
