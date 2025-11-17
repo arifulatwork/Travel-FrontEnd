@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Globe, MapPin, Calendar, DollarSign, Check, ArrowRight,
-  Clock, Building2, Users, FileText, Shield, MessageCircle,
-  Star, Award, Briefcase, Home, Plane, CreditCard,
-  Loader2, X, ChevronDown, ChevronUp, Upload, Zap
+  Globe, MapPin, Calendar, Check, ArrowRight,
+  Clock, Building2, Users, Shield,
+  Star, Award, Briefcase, Plane, CreditCard,
+  Loader2, X, Upload, Zap
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+const API_BASE = 'http://127.0.0.1:8000/api';
 
 interface InternshipLocation {
   id: string;
@@ -23,7 +25,7 @@ interface InternshipField {
 }
 
 interface Company {
-  id: string;
+  id: number; // now numeric, matches DB
   name: string;
   logo: string;
   location: string;
@@ -42,13 +44,32 @@ interface Condition {
 }
 
 interface Service {
-  id: string;
+  id: string; // slug from backend
   name: string;
   description: string;
   price: number;
   originalPrice?: number;
   popular?: boolean;
 }
+
+const getFieldIcon = (fieldId: string): React.ComponentType<any> => {
+  switch (fieldId) {
+    case 'technology':
+      return Briefcase;
+    case 'business':
+      return Users;
+    case 'hospitality':
+      return Plane;
+    case 'education':
+      return Award;
+    case 'healthcare':
+      return Shield;
+    case 'engineering':
+      return Building2;
+    default:
+      return Briefcase;
+  }
+};
 
 const InternshipMarketplace: React.FC = () => {
   const navigate = useNavigate();
@@ -57,7 +78,7 @@ const InternshipMarketplace: React.FC = () => {
   const [showConditions, setShowConditions] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [acceptedConditions, setAcceptedConditions] = useState<string[]>([]);
-  const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
+  const [selectedCompany, setSelectedCompany] = useState<number | null>(null);
   const [selectedDates, setSelectedDates] = useState({
     startDate: '',
     endDate: ''
@@ -70,35 +91,11 @@ const InternshipMarketplace: React.FC = () => {
   const [locations, setLocations] = useState<InternshipLocation[]>([]);
   const [fields, setFields] = useState<InternshipField[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [conditions, setConditions] = useState<Condition[]>([]);
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Services data
-  const services: Service[] = [
-    {
-      id: 'cv-enhancement',
-      name: 'CV Enhancement',
-      description: 'Professional CV redesign and content optimization by our experts',
-      price: 100,
-      popular: false
-    },
-    {
-      id: 'placement',
-      name: 'Internship Placement',
-      description: 'Guaranteed placement in a company that matches your profile',
-      price: 390,
-      originalPrice: 490,
-      popular: true
-    },
-    {
-      id: 'premium-package',
-      name: 'Premium Package',
-      description: 'CV Enhancement + Placement (Best Value)',
-      price: 290,
-      originalPrice: 490,
-      popular: false
-    }
-  ];
 
   // Calculate minimum and maximum dates
   const getMinStartDate = () => {
@@ -122,43 +119,48 @@ const InternshipMarketplace: React.FC = () => {
 
   const validateDates = (startDate: string, endDate: string): string => {
     if (!startDate || !endDate) return '';
-    
+
     const start = new Date(startDate);
     const end = new Date(endDate);
     const today = new Date();
-    
-    // Check if start date is in the future
-    if (start <= today) {
+
+    // Check if start date is in the future (at least 30 days)
+    const minStart = new Date();
+    minStart.setDate(minStart.getDate() + 30);
+    if (start <= today || start < minStart) {
       return 'Start date must be at least 30 days from today';
     }
-    
+
     // Calculate duration in months
-    const monthsDiff = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
-    
+    const monthsDiff =
+      (end.getFullYear() - start.getFullYear()) * 12 +
+      (end.getMonth() - start.getMonth());
+
     if (monthsDiff < 3) {
       return 'Internship duration must be at least 3 months';
     }
-    
+
     if (monthsDiff > 12) {
       return 'Internship duration cannot exceed 12 months';
     }
-    
+
     return '';
   };
 
   const handleStartDateChange = (startDate: string) => {
     setSelectedDates(prev => ({ ...prev, startDate }));
-    
+
     if (startDate) {
       // Auto-set end date to minimum 3 months
       const minEndDate = calculateEndDate(startDate, 3);
       setSelectedDates(prev => ({ ...prev, endDate: minEndDate }));
+      setDateError('');
     }
   };
 
   const handleEndDateChange = (endDate: string) => {
     setSelectedDates(prev => ({ ...prev, endDate }));
-    
+
     // Validate dates whenever end date changes
     if (selectedDates.startDate && endDate) {
       const error = validateDates(selectedDates.startDate, endDate);
@@ -183,179 +185,80 @@ const InternshipMarketplace: React.FC = () => {
     }
   };
 
-  // Mock data - replace with actual API calls
+  // Initial data: locations, fields, services, conditions
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchInitialData = async () => {
       try {
         setIsLoading(true);
-        
-        // Simulate API calls
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        setLocations([
-          {
-            id: 'spain',
-            country: 'Spain',
-            cities: ['Barcelona', 'Madrid', 'Valencia'],
-            flag: '🇪🇸',
-            popular: true
-          },
-          {
-            id: 'uk',
-            country: 'England',
-            cities: ['London', 'Manchester', 'Edinburgh'],
-            flag: '🇬🇧',
-            popular: true
-          },
-          {
-            id: 'usa',
-            country: 'United States',
-            cities: ['New York', 'Miami', 'Los Angeles'],
-            flag: '🇺🇸',
-            popular: true
-          },
-          {
-            id: 'argentina',
-            country: 'Argentina',
-            cities: ['Buenos Aires', 'Córdoba', 'Mendoza'],
-            flag: '🇦🇷',
-            popular: false
-          },
-          {
-            id: 'france',
-            country: 'France',
-            cities: ['Paris', 'Lyon', 'Marseille'],
-            flag: '🇫🇷',
-            popular: false
-          },
-          {
-            id: 'germany',
-            country: 'Germany',
-            cities: ['Berlin', 'Munich', 'Hamburg'],
-            flag: '🇩🇪',
-            popular: false
-          }
+        setError(null);
+
+        const [locRes, fieldRes, serviceRes, condRes] = await Promise.all([
+          fetch(`${API_BASE}/internships/locations`),
+          fetch(`${API_BASE}/internships/fields`),
+          fetch(`${API_BASE}/internships/services`),
+          fetch(`${API_BASE}/internships/conditions`),
         ]);
 
-        setFields([
-          {
-            id: 'technology',
-            name: 'Technology & IT',
-            icon: Briefcase,
-            description: 'Software development, IT support, cybersecurity'
-          },
-          {
-            id: 'business',
-            name: 'Business & Marketing',
-            icon: Users,
-            description: 'Marketing, sales, business development'
-          },
-          {
-            id: 'hospitality',
-            name: 'Hospitality & Tourism',
-            icon: Plane,
-            description: 'Hotels, tourism, event management'
-          },
-          {
-            id: 'education',
-            name: 'Education',
-            icon: Award,
-            description: 'Teaching, educational administration'
-          },
-          {
-            id: 'healthcare',
-            name: 'Healthcare',
-            icon: Shield,
-            description: 'Medical, nursing, healthcare administration'
-          },
-          {
-            id: 'engineering',
-            name: 'Engineering',
-            icon: Building2,
-            description: 'Civil, mechanical, electrical engineering'
-          }
+        if (!locRes.ok || !fieldRes.ok || !serviceRes.ok || !condRes.ok) {
+          throw new Error('Failed to load internship data');
+        }
+
+        const [locData, fieldData, serviceData, condData] = await Promise.all([
+          locRes.json(),
+          fieldRes.json(),
+          serviceRes.json(),
+          condRes.json(),
         ]);
 
-        setCompanies([
-          {
-            id: 'dprealeste-1',
-            name: 'DPrealeste - Real Estate Research',
-            logo: '/api/placeholder/80/80',
-            location: 'Barcelona, Spain',
-            field: 'business',
-            rating: 4.8,
-            reviews: 124,
-            workMode: 'hybrid',
-            duration: '4-6 months',
-            hours: '20-30h/week'
-          },
-          {
-            id: 'dprealeste-2',
-            name: 'DPrealeste - Digital Marketing',
-            logo: '/api/placeholder/80/80',
-            location: 'Barcelona, Spain',
-            field: 'business',
-            rating: 4.6,
-            reviews: 89,
-            workMode: 'hybrid',
-            duration: '4-6 months',
-            hours: '20-30h/week'
-          },
-          {
-            id: 'meet-eat-1',
-            name: 'Meet & Eat - Event Coordination',
-            logo: '/api/placeholder/80/80',
-            location: 'Barcelona, Spain',
-            field: 'hospitality',
-            rating: 4.7,
-            reviews: 67,
-            workMode: 'offline',
-            duration: '3-6 months',
-            hours: '15-25h/week'
-          },
-          {
-            id: 'electronic-1',
-            name: 'Electronic Software Solutions',
-            logo: '/api/placeholder/80/80',
-            location: 'Remote',
-            field: 'technology',
-            rating: 4.9,
-            reviews: 156,
-            workMode: 'online',
-            duration: '3-12 months',
-            hours: 'Flexible'
-          },
-          {
-            id: 'dpoint-1',
-            name: 'Dpoint Group - Business Development',
-            logo: '/api/placeholder/80/80',
-            location: 'Multiple Locations',
-            field: 'business',
-            rating: 4.5,
-            reviews: 78,
-            workMode: 'hybrid',
-            duration: '4-8 months',
-            hours: '20-35h/week'
-          }
-        ]);
-
+        setLocations(locData);
+        setFields(
+          fieldData.map((f: any) => ({
+            ...f,
+            icon: getFieldIcon(f.id),
+          }))
+        );
+        setServices(serviceData);
+        setConditions(condData);
       } catch (err) {
-        setError('Failed to load internship data');
         console.error('Error fetching data:', err);
+        setError('Failed to load internship data');
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchData();
+    fetchInitialData();
   }, []);
 
-  const conditions: Condition[] = [
-    { id: 'age', text: 'To be 18 years old or over', required: true },
-    { id: 'language', text: 'To have a high level in the language of the country where you will carry out your internship or to have intermediate level English', required: true },
-    { id: 'visa', text: 'To have a valid student visa or a valid passport for the corresponding country', required: true },
-    { id: 'university', text: 'To be able to provide a university form/agreement to be signed with the company', required: true }
-  ];
+  // Companies: re-fetch whenever filters change
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const params = new URLSearchParams();
+        if (selectedLocation !== 'all') params.append('location', selectedLocation);
+        if (selectedField !== 'all') params.append('field', selectedField);
+
+        const res = await fetch(
+          `${API_BASE}/internships/companies${params.toString() ? `?${params.toString()}` : ''}`
+        );
+
+        if (!res.ok) throw new Error('Failed to fetch companies');
+
+        const data = await res.json();
+        setCompanies(data);
+      } catch (err) {
+        console.error('Error fetching companies:', err);
+        setError('Failed to load internship data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCompanies();
+  }, [selectedLocation, selectedField]);
 
   const handleConditionToggle = (conditionId: string) => {
     setAcceptedConditions(prev =>
@@ -378,6 +281,11 @@ const InternshipMarketplace: React.FC = () => {
   };
 
   const handlePayment = async () => {
+    if (!selectedCompany) {
+      alert('Please select a company');
+      return;
+    }
+
     if (selectedServices.length === 0) {
       alert('Please select at least one service');
       return;
@@ -389,46 +297,81 @@ const InternshipMarketplace: React.FC = () => {
     }
 
     // Validate dates before processing payment
-    const error = validateDates(selectedDates.startDate, selectedDates.endDate);
-    if (error) {
-      setDateError(error);
+    const errorMsg = validateDates(selectedDates.startDate, selectedDates.endDate);
+    if (errorMsg) {
+      setDateError(errorMsg);
       return;
     }
 
-    setIsProcessing(true);
-    // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsProcessing(false);
-    setShowPaymentModal(false);
-    
-    // Show success message with internship details
-    const start = new Date(selectedDates.startDate);
-    const end = new Date(selectedDates.endDate);
-    const monthsDiff = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
-    
-    const selectedServiceNames = services
-      .filter(service => selectedServices.includes(service.id))
-      .map(service => service.name)
-      .join(', ');
+    try {
+      setIsProcessing(true);
+      setDateError('');
 
-    alert(`Application submitted successfully!\n\nServices: ${selectedServiceNames}\nDuration: ${monthsDiff} months\nStart Date: ${start.toLocaleDateString()}\nEnd Date: ${end.toLocaleDateString()}\n\nOur team will contact you shortly to discuss your placement.`);
+      const formData = new FormData();
+      formData.append('company_id', String(selectedCompany));
+      formData.append('start_date', selectedDates.startDate);
+      formData.append('end_date', selectedDates.endDate);
+      selectedServices.forEach(s => formData.append('selected_services[]', s));
+      acceptedConditions.forEach(c => formData.append('accepted_conditions[]', c));
+      formData.append('cv', cvFile);
+
+      const res = await fetch(`${API_BASE}/auth/internships/apply`, {
+        method: 'POST',
+        credentials: 'include', // for Sanctum; or add Authorization header if using tokens
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error('Apply error:', data);
+        alert(data.message || 'Failed to submit application');
+        return;
+      }
+
+      // Here you can plug in your existing Stripe flow using data.client_secret
+      // e.g. stripe.confirmCardPayment(data.client_secret, { payment_method: { ... } })
+
+      setShowPaymentModal(false);
+
+      const start = new Date(selectedDates.startDate);
+      const end = new Date(selectedDates.endDate);
+      const monthsDiff =
+        (end.getFullYear() - start.getFullYear()) * 12 +
+        (end.getMonth() - start.getMonth());
+
+      const selectedServiceNames = services
+        .filter(service => selectedServices.includes(service.id))
+        .map(service => service.name)
+        .join(', ');
+
+      alert(
+        `Application submitted successfully!\n\n` +
+        `Application ID: ${data.application_id}\n` +
+        `Services: ${selectedServiceNames}\n` +
+        `Duration: ${monthsDiff} months\n` +
+        `Start Date: ${start.toLocaleDateString()}\n` +
+        `End Date: ${end.toLocaleDateString()}\n\n` +
+        `Next step: complete payment with Stripe using the provided client secret.`
+      );
+    } catch (err) {
+      console.error('Payment/apply error:', err);
+      alert('Something went wrong while submitting your application.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
-
-  const filteredCompanies = companies.filter(company => {
-    const locationMatch = selectedLocation === 'all' || 
-      company.location.toLowerCase().includes(selectedLocation.toLowerCase());
-    const fieldMatch = selectedField === 'all' || company.field === selectedField;
-    return locationMatch && fieldMatch;
-  });
 
   // Calculate duration for display
   const getDurationText = () => {
     if (!selectedDates.startDate || !selectedDates.endDate) return '';
-    
+
     const start = new Date(selectedDates.startDate);
     const end = new Date(selectedDates.endDate);
-    const monthsDiff = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
-    
+    const monthsDiff =
+      (end.getFullYear() - start.getFullYear()) * 12 +
+      (end.getMonth() - start.getMonth());
+
     return `${monthsDiff} month${monthsDiff !== 1 ? 's' : ''}`;
   };
 
@@ -443,7 +386,7 @@ const InternshipMarketplace: React.FC = () => {
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           Error loading internship data: {error}
         </div>
-        <button 
+        <button
           onClick={() => window.location.reload()}
           className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
         >
@@ -465,28 +408,13 @@ const InternshipMarketplace: React.FC = () => {
           Enhance your CV and refine your motivation letter — secure your internship placement today.
         </p>
         <p className="text-lg text-gray-700 max-w-4xl mx-auto mb-4">
-          Looking to make your Erasmus experience truly unforgettable? Join a professional environment where your creativity, ideas, and international mindset truly make a difference.
+          Looking to make your Erasmus experience truly unforgettable? Join a professional environment where your creativity,
+          ideas, and international mindset truly make a difference.
         </p>
         <p className="text-lg text-gray-700 max-w-4xl mx-auto">
           Make your time abroad count — turn your stay into a powerful step toward your future career success.
         </p>
       </div>
-
-      {/* School of Leadership Section */}
-      {/* <div className="bg-purple-50 rounded-xl p-8 mb-16 text-center">
-        <h2 className="text-2xl font-bold mb-4 text-purple-800">Join Our International Internship Program</h2>
-        <p className="text-lg text-purple-700 mb-4">
-          Choose from exciting destinations worldwide
-        </p>
-        <div className="flex flex-wrap justify-center gap-4 mt-6">
-          {['Barcelona', 'Madrid', 'London', 'New York', 'Miami', 'Buenos Aires', 'Paris', 'Berlin'].map((city) => (
-            <div key={city} className="bg-white px-4 py-2 rounded-full shadow-sm flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-purple-600" />
-              <span className="text-purple-700 font-medium">{city}</span>
-            </div>
-          ))}
-        </div>
-      </div> */}
 
       {/* Features Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
@@ -497,7 +425,8 @@ const InternshipMarketplace: React.FC = () => {
           </div>
           <h3 className="font-semibold text-lg mb-2">Choose Your Career Field</h3>
           <p className="text-gray-600">
-            You can choose more than two fields. Select where you want to apply and according to your CV and experience we will direct you to the best position available.
+            You can choose more than two fields. Select where you want to apply and according to your CV and experience we
+            will direct you to the best position available.
           </p>
         </div>
 
@@ -508,7 +437,8 @@ const InternshipMarketplace: React.FC = () => {
           </div>
           <h3 className="font-semibold text-lg mb-2">Select Duration</h3>
           <p className="text-gray-600">
-            Fill out your preferred dates for the internship. We offer flexible durations from 3 to 12 months to fit your academic schedule.
+            Fill out your preferred dates for the internship. We offer flexible durations from 3 to 12 months to fit your
+            academic schedule.
           </p>
         </div>
 
@@ -535,12 +465,12 @@ const InternshipMarketplace: React.FC = () => {
         <h2 className="text-2xl font-bold text-center mb-8">How It Works</h2>
         <div className="max-w-4xl mx-auto">
           <p className="text-gray-700 mb-4">
-            We network with companies around the world to provide you with international experience. 
-            Our service includes guaranteed interviews and continuous support throughout your journey.
+            We network with companies around the world to provide you with international experience. Our service includes
+            guaranteed interviews and continuous support throughout your journey.
           </p>
           <p className="text-gray-700 mb-4">
-            We aim to place you in your preferred company and location. If the first placement doesn't match your expectations, 
-            we'll find you another opportunity that better suits your needs.
+            We aim to place you in your preferred company and location. If the first placement doesn't match your
+            expectations, we'll find you another opportunity that better suits your needs.
           </p>
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-6">
             <p className="text-green-800 font-semibold text-center text-lg">
@@ -557,21 +487,22 @@ const InternshipMarketplace: React.FC = () => {
       <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-8 mb-16">
         <h2 className="text-2xl font-bold text-center mb-8">Remuneration & Benefits</h2>
         <p className="text-center text-gray-700 mb-8 max-w-4xl mx-auto">
-          While these internships are primarily experience-based learning opportunities, students gain a wide range of valuable benefits that go beyond financial compensation:
+          While these internships are primarily experience-based learning opportunities, students gain a wide range of
+          valuable benefits that go beyond financial compensation:
         </p>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {[
-            "Commissions based on performance or results (for roles involving marketing, business development, or sales)",
-            "Flexible working hours to balance professional and academic commitments",
-            "Remote or hybrid work options (depending on the role and project)",
-            "Professional mentoring and coaching from senior team members",
-            "Certification of Internship Completion recognized by international universities",
-            "Real project participation – your work will be used in active company operations",
-            "Portfolio development – ideal for creative and marketing students",
-            "Networking opportunities with international teams and industry professionals",
-            "Skill development workshops in marketing, project management, or digital tools",
-            "Priority consideration for future paid roles or freelance projects"
+            'Commissions based on performance or results (for roles involving marketing, business development, or sales)',
+            'Flexible working hours to balance professional and academic commitments',
+            'Remote or hybrid work options (depending on the role and project)',
+            'Professional mentoring and coaching from senior team members',
+            'Certification of Internship Completion recognized by international universities',
+            'Real project participation – your work will be used in active company operations',
+            'Portfolio development – ideal for creative and marketing students',
+            'Networking opportunities with international teams and industry professionals',
+            'Skill development workshops in marketing, project management, or digital tools',
+            'Priority consideration for future paid roles or freelance projects',
           ].map((benefit, index) => (
             <div key={index} className="bg-white rounded-lg p-4 shadow-sm border border-purple-100">
               <div className="flex items-start gap-3">
@@ -583,10 +514,10 @@ const InternshipMarketplace: React.FC = () => {
             </div>
           ))}
         </div>
-        
+
         <p className="text-center text-gray-600 mt-8 max-w-4xl mx-auto">
-          These benefits are designed to help Erasmus and international students gain real-world experience, 
-          build their professional profile, and develop global employability skills in an international work environment.
+          These benefits are designed to help Erasmus and international students gain real-world experience, build their
+          professional profile, and develop global employability skills in an international work environment.
         </p>
       </div>
 
@@ -597,17 +528,17 @@ const InternshipMarketplace: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-4">
             <select
               value={selectedLocation}
-              onChange={(e) => setSelectedLocation(e.target.value)}
+              onChange={e => setSelectedLocation(e.target.value)}
               className="bg-white border border-gray-300 rounded-lg px-4 py-2"
             >
               <option value="all">All Locations</option>
               <option value="barcelona">Barcelona</option>
               <option value="remote">Remote</option>
-              <option value="multiple">Multiple Locations</option>
+              <option value="Multiple">Multiple Locations</option>
             </select>
             <select
               value={selectedField}
-              onChange={(e) => setSelectedField(e.target.value)}
+              onChange={e => setSelectedField(e.target.value)}
               className="bg-white border border-gray-300 rounded-lg px-4 py-2"
             >
               <option value="all">All Fields</option>
@@ -622,15 +553,20 @@ const InternshipMarketplace: React.FC = () => {
 
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array(6).fill(0).map((_, i) => (
-              <div key={i} className="bg-white rounded-xl shadow-sm h-48 flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-              </div>
-            ))}
+            {Array(6)
+              .fill(0)
+              .map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-white rounded-xl shadow-sm h-48 flex items-center justify-center"
+                >
+                  <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+                </div>
+              ))}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCompanies.map((company) => (
+            {companies.map(company => (
               <div
                 key={company.id}
                 className="bg-white rounded-xl shadow-sm overflow-hidden transition-transform hover:scale-[1.02] border border-gray-100"
@@ -650,10 +586,10 @@ const InternshipMarketplace: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between mb-3">
                     <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm">
-                      {fields.find(f => f.id === company.field)?.name}
+                      {fields.find(f => f.id === company.field)?.name || company.field}
                     </span>
                     <div className="flex items-center gap-1">
                       <Star className="h-4 w-4 text-yellow-400 fill-current" />
@@ -668,10 +604,15 @@ const InternshipMarketplace: React.FC = () => {
                       <span>{company.duration}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className={`w-2 h-2 rounded-full ${
-                        company.workMode === 'online' ? 'bg-green-500' :
-                        company.workMode === 'offline' ? 'bg-blue-500' : 'bg-purple-500'
-                      }`}></span>
+                      <span
+                        className={`w-2 h-2 rounded-full ${
+                          company.workMode === 'online'
+                            ? 'bg-green-500'
+                            : company.workMode === 'offline'
+                            ? 'bg-blue-500'
+                            : 'bg-purple-500'
+                        }`}
+                      ></span>
                       <span className="capitalize">{company.workMode}</span>
                     </div>
                   </div>
@@ -724,8 +665,8 @@ const InternshipMarketplace: React.FC = () => {
               <p className="text-gray-700">
                 Below are the criteria that you must meet in order to apply for our internships:
               </p>
-              
-              {conditions.map((condition) => (
+
+              {conditions.map(condition => (
                 <div key={condition.id} className="flex items-start gap-3">
                   <button
                     onClick={() => handleConditionToggle(condition.id)}
@@ -735,9 +676,15 @@ const InternshipMarketplace: React.FC = () => {
                         : 'border-gray-300'
                     }`}
                   >
-                    {acceptedConditions.includes(condition.id) && <Check className="h-4 w-4" />}
+                    {acceptedConditions.includes(condition.id) && (
+                      <Check className="h-4 w-4" />
+                    )}
                   </button>
-                  <span className={`${condition.required ? 'font-medium' : 'text-gray-600'}`}>
+                  <span
+                    className={`${
+                      condition.required ? 'font-medium' : 'text-gray-600'
+                    }`}
+                  >
                     {condition.text}
                   </span>
                 </div>
@@ -787,7 +734,7 @@ const InternshipMarketplace: React.FC = () => {
               <div>
                 <h4 className="font-semibold text-lg mb-4">Choose Your Services</h4>
                 <div className="grid gap-4">
-                  {services.map((service) => (
+                  {services.map(service => (
                     <div
                       key={service.id}
                       className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
@@ -799,12 +746,16 @@ const InternshipMarketplace: React.FC = () => {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
-                            selectedServices.includes(service.id)
-                              ? 'bg-purple-600 border-purple-600 text-white'
-                              : 'border-gray-300'
-                          }`}>
-                            {selectedServices.includes(service.id) && <Check className="h-4 w-4" />}
+                          <div
+                            className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
+                              selectedServices.includes(service.id)
+                                ? 'bg-purple-600 border-purple-600 text-white'
+                                : 'border-gray-300'
+                            }`}
+                          >
+                            {selectedServices.includes(service.id) && (
+                              <Check className="h-4 w-4" />
+                            )}
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
@@ -815,13 +766,17 @@ const InternshipMarketplace: React.FC = () => {
                                 </span>
                               )}
                             </div>
-                            <p className="text-sm text-gray-600">{service.description}</p>
+                            <p className="text-sm text-gray-600">
+                              {service.description}
+                            </p>
                           </div>
                         </div>
                         <div className="text-right">
                           <div className="font-bold text-lg">€{service.price}</div>
                           {service.originalPrice && (
-                            <div className="text-sm text-gray-500 line-through">€{service.originalPrice}</div>
+                            <div className="text-sm text-gray-500 line-through">
+                              €{service.originalPrice}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -865,7 +820,7 @@ const InternshipMarketplace: React.FC = () => {
                     <input
                       type="date"
                       value={selectedDates.startDate}
-                      onChange={(e) => handleStartDateChange(e.target.value)}
+                      onChange={e => handleStartDateChange(e.target.value)}
                       min={getMinStartDate()}
                       max={getMaxStartDate()}
                       className="border border-gray-300 rounded-lg px-3 py-2 w-full"
@@ -878,14 +833,22 @@ const InternshipMarketplace: React.FC = () => {
                     <input
                       type="date"
                       value={selectedDates.endDate}
-                      onChange={(e) => handleEndDateChange(e.target.value)}
-                      min={selectedDates.startDate ? calculateEndDate(selectedDates.startDate, 3) : ''}
-                      max={selectedDates.startDate ? calculateEndDate(selectedDates.startDate, 12) : ''}
+                      onChange={e => handleEndDateChange(e.target.value)}
+                      min={
+                        selectedDates.startDate
+                          ? calculateEndDate(selectedDates.startDate, 3)
+                          : ''
+                      }
+                      max={
+                        selectedDates.startDate
+                          ? calculateEndDate(selectedDates.startDate, 12)
+                          : ''
+                      }
                       className="border border-gray-300 rounded-lg px-3 py-2 w-full"
                     />
                   </div>
                 </div>
-                
+
                 {selectedDates.startDate && selectedDates.endDate && (
                   <div className="text-center">
                     <span className="text-sm font-medium text-purple-600">
@@ -893,7 +856,7 @@ const InternshipMarketplace: React.FC = () => {
                     </span>
                   </div>
                 )}
-                
+
                 {dateError && (
                   <div className="text-red-600 text-sm mt-2 text-center">
                     {dateError}
@@ -912,7 +875,14 @@ const InternshipMarketplace: React.FC = () => {
 
             <button
               onClick={handlePayment}
-              disabled={isProcessing || selectedServices.length === 0 || !cvFile || !selectedDates.startDate || !selectedDates.endDate || !!dateError}
+              disabled={
+                isProcessing ||
+                selectedServices.length === 0 ||
+                !cvFile ||
+                !selectedDates.startDate ||
+                !selectedDates.endDate ||
+                !!dateError
+              }
               className="w-full flex items-center justify-center gap-2 bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors disabled:bg-gray-400 mt-6"
             >
               {isProcessing ? (
