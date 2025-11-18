@@ -93,9 +93,46 @@ const InternshipMarketplace: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [conditions, setConditions] = useState<Condition[]>([]);
+  const [user, setUser] = useState<any | null>(null); // NEW: authenticated user
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // ==========================
+  // Fetch authenticated user
+  // ==========================
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          console.log('No token found in localStorage (InternshipMarketplace)');
+          return;
+        }
+
+        const res = await fetch(`${API_BASE}/auth/user`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+          credentials: 'include',
+        });
+
+        if (!res.ok) {
+          console.log('Failed to fetch authenticated user (InternshipMarketplace):', res.status, res.statusText);
+          return;
+        }
+
+        const data = await res.json();
+        setUser(data);
+        console.log('✅ Authenticated user (InternshipMarketplace):', data);
+      } catch (err) {
+        console.error('❌ Error fetching user in InternshipMarketplace:', err);
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   // Calculate minimum and maximum dates
   const getMinStartDate = () => {
@@ -303,6 +340,12 @@ const InternshipMarketplace: React.FC = () => {
       return;
     }
 
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('You must be logged in to apply for an internship.');
+      return;
+    }
+
     try {
       setIsProcessing(true);
       setDateError('');
@@ -317,14 +360,24 @@ const InternshipMarketplace: React.FC = () => {
 
       const res = await fetch(`${API_BASE}/auth/internships/apply`, {
         method: 'POST',
-        credentials: 'include', // for Sanctum; or add Authorization header if using tokens
+        credentials: 'include', // for Sanctum session if any
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
         body: formData,
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(text);
+      } catch {
+        console.error('Non-JSON response from apply endpoint:', text);
+      }
 
       if (!res.ok) {
-        console.error('Apply error:', data);
+        console.error('Apply error:', data || text);
         alert(data.message || 'Failed to submit application');
         return;
       }
@@ -347,12 +400,14 @@ const InternshipMarketplace: React.FC = () => {
 
       alert(
         `Application submitted successfully!\n\n` +
-        `Application ID: ${data.application_id}\n` +
+        (data.application_id ? `Application ID: ${data.application_id}\n` : '') +
         `Services: ${selectedServiceNames}\n` +
         `Duration: ${monthsDiff} months\n` +
         `Start Date: ${start.toLocaleDateString()}\n` +
         `End Date: ${end.toLocaleDateString()}\n\n` +
-        `Next step: complete payment with Stripe using the provided client secret.`
+        (data.client_secret
+          ? `Next step: complete payment with Stripe using the provided client secret.`
+          : `Next step: we will contact you about your application.`)
       );
     } catch (err) {
       console.error('Payment/apply error:', err);
