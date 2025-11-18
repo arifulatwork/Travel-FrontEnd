@@ -6,8 +6,20 @@ import {
   Loader2, X, Upload, Zap
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { loadStripe } from '@stripe/stripe-js';
+import {
+  Elements,
+  useStripe,
+  useElements,
+  CardElement,
+} from '@stripe/react-stripe-js';
 
 const API_BASE = 'http://127.0.0.1:8000/api';
+
+// ⚡ Stripe public key (same pattern as other components)
+const stripePromise = loadStripe(
+  import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_...'
+);
 
 interface InternshipLocation {
   id: string;
@@ -25,7 +37,7 @@ interface InternshipField {
 }
 
 interface Company {
-  id: number; // now numeric, matches DB
+  id: number; // numeric, matches DB
   name: string;
   logo: string;
   location: string;
@@ -71,8 +83,15 @@ const getFieldIcon = (fieldId: string): React.ComponentType<any> => {
   }
 };
 
-const InternshipMarketplace: React.FC = () => {
+/**
+ * Inner component that actually uses Stripe hooks.
+ * Wrapped by <Elements> below.
+ */
+const InternshipMarketplaceInner: React.FC = () => {
   const navigate = useNavigate();
+  const stripe = useStripe();
+  const elements = useElements();
+
   const [selectedLocation, setSelectedLocation] = useState<string>('all');
   const [selectedField, setSelectedField] = useState<string>('all');
   const [showConditions, setShowConditions] = useState(false);
@@ -81,7 +100,7 @@ const InternshipMarketplace: React.FC = () => {
   const [selectedCompany, setSelectedCompany] = useState<number | null>(null);
   const [selectedDates, setSelectedDates] = useState({
     startDate: '',
-    endDate: ''
+    endDate: '',
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [dateError, setDateError] = useState('');
@@ -93,7 +112,7 @@ const InternshipMarketplace: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [conditions, setConditions] = useState<Condition[]>([]);
-  const [user, setUser] = useState<any | null>(null); // NEW: authenticated user
+  const [user, setUser] = useState<any | null>(null); // authenticated user
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -119,7 +138,11 @@ const InternshipMarketplace: React.FC = () => {
         });
 
         if (!res.ok) {
-          console.log('Failed to fetch authenticated user (InternshipMarketplace):', res.status, res.statusText);
+          console.log(
+            'Failed to fetch authenticated user (InternshipMarketplace):',
+            res.status,
+            res.statusText
+          );
           return;
         }
 
@@ -134,7 +157,9 @@ const InternshipMarketplace: React.FC = () => {
     fetchUser();
   }, []);
 
-  // Calculate minimum and maximum dates
+  // ==========================
+  // Date helpers
+  // ==========================
   const getMinStartDate = () => {
     const today = new Date();
     today.setDate(today.getDate() + 30); // 30 days from today
@@ -161,14 +186,12 @@ const InternshipMarketplace: React.FC = () => {
     const end = new Date(endDate);
     const today = new Date();
 
-    // Check if start date is in the future (at least 30 days)
     const minStart = new Date();
     minStart.setDate(minStart.getDate() + 30);
     if (start <= today || start < minStart) {
       return 'Start date must be at least 30 days from today';
     }
 
-    // Calculate duration in months
     const monthsDiff =
       (end.getFullYear() - start.getFullYear()) * 12 +
       (end.getMonth() - start.getMonth());
@@ -188,7 +211,6 @@ const InternshipMarketplace: React.FC = () => {
     setSelectedDates(prev => ({ ...prev, startDate }));
 
     if (startDate) {
-      // Auto-set end date to minimum 3 months
       const minEndDate = calculateEndDate(startDate, 3);
       setSelectedDates(prev => ({ ...prev, endDate: minEndDate }));
       setDateError('');
@@ -198,10 +220,9 @@ const InternshipMarketplace: React.FC = () => {
   const handleEndDateChange = (endDate: string) => {
     setSelectedDates(prev => ({ ...prev, endDate }));
 
-    // Validate dates whenever end date changes
     if (selectedDates.startDate && endDate) {
-      const error = validateDates(selectedDates.startDate, endDate);
-      setDateError(error);
+      const errMsg = validateDates(selectedDates.startDate, endDate);
+      setDateError(errMsg);
     }
   };
 
@@ -222,7 +243,9 @@ const InternshipMarketplace: React.FC = () => {
     }
   };
 
-  // Initial data: locations, fields, services, conditions
+  // ==========================
+  // Initial data
+  // ==========================
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -267,7 +290,9 @@ const InternshipMarketplace: React.FC = () => {
     fetchInitialData();
   }, []);
 
-  // Companies: re-fetch whenever filters change
+  // ==========================
+  // Companies: re-fetch on filters
+  // ==========================
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
@@ -279,7 +304,9 @@ const InternshipMarketplace: React.FC = () => {
         if (selectedField !== 'all') params.append('field', selectedField);
 
         const res = await fetch(
-          `${API_BASE}/internships/companies${params.toString() ? `?${params.toString()}` : ''}`
+          `${API_BASE}/internships/companies${
+            params.toString() ? `?${params.toString()}` : ''
+          }`
         );
 
         if (!res.ok) throw new Error('Failed to fetch companies');
@@ -297,6 +324,9 @@ const InternshipMarketplace: React.FC = () => {
     fetchCompanies();
   }, [selectedLocation, selectedField]);
 
+  // ==========================
+  // Conditions
+  // ==========================
   const handleConditionToggle = (conditionId: string) => {
     setAcceptedConditions(prev =>
       prev.includes(conditionId)
@@ -317,6 +347,9 @@ const InternshipMarketplace: React.FC = () => {
     setShowPaymentModal(true);
   };
 
+  // ==========================
+  // Stripe Payment Flow
+  // ==========================
   const handlePayment = async () => {
     if (!selectedCompany) {
       alert('Please select a company');
@@ -333,10 +366,9 @@ const InternshipMarketplace: React.FC = () => {
       return;
     }
 
-    // Validate dates before processing payment
-    const errorMsg = validateDates(selectedDates.startDate, selectedDates.endDate);
-    if (errorMsg) {
-      setDateError(errorMsg);
+    const errMsg = validateDates(selectedDates.startDate, selectedDates.endDate);
+    if (errMsg) {
+      setDateError(errMsg);
       return;
     }
 
@@ -346,10 +378,22 @@ const InternshipMarketplace: React.FC = () => {
       return;
     }
 
+    if (!stripe || !elements) {
+      alert('Payment system is still loading. Please try again in a moment.');
+      return;
+    }
+
+    const cardElement = elements.getElement(CardElement);
+    if (!cardElement) {
+      alert('Card field is not ready. Please wait a moment and try again.');
+      return;
+    }
+
     try {
       setIsProcessing(true);
       setDateError('');
 
+      // 1) Send application + create PaymentIntent on backend
       const formData = new FormData();
       formData.append('company_id', String(selectedCompany));
       formData.append('start_date', selectedDates.startDate);
@@ -360,7 +404,7 @@ const InternshipMarketplace: React.FC = () => {
 
       const res = await fetch(`${API_BASE}/auth/internships/apply`, {
         method: 'POST',
-        credentials: 'include', // for Sanctum session if any
+        credentials: 'include',
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: 'application/json',
@@ -376,39 +420,62 @@ const InternshipMarketplace: React.FC = () => {
         console.error('Non-JSON response from apply endpoint:', text);
       }
 
-      if (!res.ok) {
+      if (!res.ok || !data.client_secret) {
         console.error('Apply error:', data || text);
-        alert(data.message || 'Failed to submit application');
+        alert(data.message || 'Failed to submit application or create payment.');
         return;
       }
 
-      // Here you can plug in your existing Stripe flow using data.client_secret
-      // e.g. stripe.confirmCardPayment(data.client_secret, { payment_method: { ... } })
+      const clientSecret = data.client_secret as string;
 
-      setShowPaymentModal(false);
+      // 2) Confirm payment with Stripe using CardElement
+      const paymentResult = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: cardElement,
+          billing_details: {
+            name:
+              user?.name ||
+              user?.full_name ||
+              'Internship Applicant',
+            email: user?.email,
+          },
+        },
+      });
 
-      const start = new Date(selectedDates.startDate);
-      const end = new Date(selectedDates.endDate);
-      const monthsDiff =
-        (end.getFullYear() - start.getFullYear()) * 12 +
-        (end.getMonth() - start.getMonth());
+      if (paymentResult.error) {
+        console.error('Stripe payment error:', paymentResult.error);
+        alert(paymentResult.error.message || 'Payment failed. Please try again.');
+        return;
+      }
 
-      const selectedServiceNames = services
-        .filter(service => selectedServices.includes(service.id))
-        .map(service => service.name)
-        .join(', ');
+      if (paymentResult.paymentIntent?.status === 'succeeded') {
+        const start = new Date(selectedDates.startDate);
+        const end = new Date(selectedDates.endDate);
+        const monthsDiff =
+          (end.getFullYear() - start.getFullYear()) * 12 +
+          (end.getMonth() - start.getMonth());
 
-      alert(
-        `Application submitted successfully!\n\n` +
-        (data.application_id ? `Application ID: ${data.application_id}\n` : '') +
-        `Services: ${selectedServiceNames}\n` +
-        `Duration: ${monthsDiff} months\n` +
-        `Start Date: ${start.toLocaleDateString()}\n` +
-        `End Date: ${end.toLocaleDateString()}\n\n` +
-        (data.client_secret
-          ? `Next step: complete payment with Stripe using the provided client secret.`
-          : `Next step: we will contact you about your application.`)
-      );
+        const selectedServiceNames = services
+          .filter(service => selectedServices.includes(service.id))
+          .map(service => service.name)
+          .join(', ');
+
+        alert(
+          `Payment successful and application submitted!\n\n` +
+          (data.application_id ? `Application ID: ${data.application_id}\n` : '') +
+          `Services: ${selectedServiceNames}\n` +
+          `Duration: ${monthsDiff} months\n` +
+          `Start Date: ${start.toLocaleDateString()}\n` +
+          `End Date: ${end.toLocaleDateString()}`
+        );
+
+        setShowPaymentModal(false);
+        // Optional: reset form here if you want
+      } else {
+        alert(
+          'Payment did not complete successfully. Please check your card or try again.'
+        );
+      }
     } catch (err) {
       console.error('Payment/apply error:', err);
       alert('Something went wrong while submitting your application.');
@@ -417,7 +484,9 @@ const InternshipMarketplace: React.FC = () => {
     }
   };
 
-  // Calculate duration for display
+  // ==========================
+  // Helpers
+  // ==========================
   const getDurationText = () => {
     if (!selectedDates.startDate || !selectedDates.endDate) return '';
 
@@ -430,7 +499,6 @@ const InternshipMarketplace: React.FC = () => {
     return `${monthsDiff} month${monthsDiff !== 1 ? 's' : ''}`;
   };
 
-  // Calculate total price
   const totalPrice = services
     .filter(service => selectedServices.includes(service.id))
     .reduce((total, service) => total + service.price, 0);
@@ -451,6 +519,9 @@ const InternshipMarketplace: React.FC = () => {
     );
   }
 
+  // ==========================
+  // JSX
+  // ==========================
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Hero Section */}
@@ -458,7 +529,9 @@ const InternshipMarketplace: React.FC = () => {
         <div className="flex items-center justify-center mb-4">
           <Globe className="h-12 w-12 text-purple-600" />
         </div>
-        <h1 className="text-4xl font-bold mb-4">🌍 Build Your Career While Experiencing Life Abroad</h1>
+        <h1 className="text-4xl font-bold mb-4">
+          🌍 Build Your Career While Experiencing Life Abroad
+        </h1>
         <p className="text-xl text-gray-600 max-w-4xl mx-auto mb-4">
           Enhance your CV and refine your motivation letter — secure your internship placement today.
         </p>
@@ -919,6 +992,21 @@ const InternshipMarketplace: React.FC = () => {
                 )}
               </div>
 
+              {/* Payment Card Section */}
+              <div>
+                <h4 className="font-semibold text-lg mb-4">Payment Details</h4>
+                <div className="border border-gray-300 rounded-lg p-4">
+                  <CardElement
+                    options={{
+                      hidePostalCode: true,
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Your payment is processed securely by Stripe. We do not store your card details.
+                </p>
+              </div>
+
               {/* Total */}
               <div className="bg-gray-50 rounded-lg p-4">
                 <div className="flex justify-between items-center text-lg font-semibold">
@@ -956,6 +1044,17 @@ const InternshipMarketplace: React.FC = () => {
         </div>
       )}
     </div>
+  );
+};
+
+/**
+ * Wrapper with <Elements> so you don't have to change where you render this component.
+ */
+const InternshipMarketplace: React.FC = () => {
+  return (
+    <Elements stripe={stripePromise}>
+      <InternshipMarketplaceInner />
+    </Elements>
   );
 };
 
